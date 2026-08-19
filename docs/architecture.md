@@ -181,7 +181,7 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 
     <!-- 操作 UI と進み具合のバーは画面基準（キャンバスの外）。ページ番号が左下、ボタンが右下 -->
     <div class="mn-hud">
-      <p class="mn-hud__counter">3 / 24</p>
+      <button type="button" class="mn-hud__counter" data-armed="false">3 / 24</button>
       <div class="mn-hud__actions">
         <button type="button" class="mn-hud__button" aria-label="前のスライド"></button>
         <button type="button" class="mn-hud__button" aria-label="次のスライド"></button>
@@ -204,6 +204,7 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 - `.mn-hud` は本文の上に重なる。`pointer-events: none` で選択を妨げず、ボタン側だけ `auto` に戻す
 - **`.mn-hud` と `.mn-progress` はキャンバスの外に置き、画面基準（`position: fixed`）で配置する。** 拡縮の影響を受けず、いつも同じ場所にある
 - 画面の隅は、比率によって「余白の上」にも「スライドの上」にもなる。**どちらでも読めるよう、文字色を背景の明るさで切り替え、うっすら地を敷く**（[D-21](./decisions.md)）。片方だけの対策では、もう片方で埋もれる
+- `.mn-hud__counter` はページ番号であると同時に入口へ戻る入口でもある。**1 クリックでは戻らない。** ポインタを乗せ続けるかダブルクリックすると `data-armed="true"` になり、そこで押すと戻る（[D-22](./decisions.md)）。発表中の誤クリックで話が止まらないようにするため
 
 ## 5. スタイル設計
 

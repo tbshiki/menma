@@ -26,6 +26,7 @@ export function startPresentation(
   appearance: Appearance,
   mount: HTMLElement,
   target: Window,
+  onExit: () => void,
 ): () => void {
   const view = renderDeck(deck, bindings, appearance);
   const controller = new NavigationController(deck.slides.length);
@@ -48,6 +49,7 @@ export function startPresentation(
       controller.next();
     },
     onToggleFullscreen: requestToggleFullscreen,
+    onExit,
   });
 
   const progress = createProgress();
@@ -82,6 +84,7 @@ export function startPresentation(
     for (const cleanup of cleanups) {
       cleanup();
     }
+    hud.destroy();
     view.root.remove();
   };
 }

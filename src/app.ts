@@ -78,7 +78,7 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
 
     stop();
     bindings = createAssetBindings(sourceAssets(next));
-    stopPresentation = startPresentation(deck, bindings, appearance, mount, target);
+    stopPresentation = startPresentation(deck, bindings, appearance, mount, target, exitToHome);
   };
 
   /** 原稿を受け取って発表へ移る。読めなければ入口へ理由を出す（FR-29） */
@@ -133,6 +133,20 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
     } finally {
       probe.release();
     }
+  };
+
+  /**
+   * 発表画面から入口へ戻る（FR-28、D-22）。
+   *
+   * ハッシュを外して入口を出す。`pushState` は `popstate` を起こさないので、
+   * 画面の切り替えはここで明示的に行う。
+   */
+  const exitToHome = (): void => {
+    if (target.location.hash !== "") {
+      const { pathname, search } = target.location;
+      target.history.pushState(null, "", `${pathname}${search}`);
+    }
+    showHome();
   };
 
   /** URL と手持ちの原稿から、いま出すべき画面を決める */

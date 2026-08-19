@@ -181,8 +181,14 @@
   transition: opacity 0.2s ease-out;
 }
 
-.mn-hud:hover,
-.mn-hud:focus-within {
+/*
+ * 親は pointer-events: none なので `.mn-hud:hover` は成立しない。
+ * 触れたかどうかは、操作を受け付ける子の :hover を :has() で拾う。
+ * ページ番号が「戻る」に変わったときも、狙えるようはっきり見せる（D-22）。
+ */
+.mn-hud:has(:hover),
+.mn-hud:focus-within,
+.mn-hud:has(.mn-hud__counter[data-armed="true"]) {
   opacity: 1;
 }
 
@@ -200,11 +206,22 @@
   background: var(--mn-hud-bg, rgb(255 255 255 / 0.75));
 }
 
+/* ページ番号は 2 段階で「入口へ戻る」に変わるボタン（D-22） */
 .mn-hud__counter {
   margin: 0;
   padding: 2px 6px;
+  border: none;
+  color: inherit;
+  cursor: default;
+  font: inherit;
   /* 左端に置く。非表示でも右側のボタンは右端のままにする */
   margin-inline-end: auto;
+  pointer-events: auto;
+}
+
+.mn-hud__counter[data-armed="true"] {
+  border: 1px solid currentcolor;
+  cursor: pointer;
 }
 
 .mn-hud__counter[hidden] {

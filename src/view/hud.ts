@@ -1,4 +1,5 @@
 import type { PresentationState } from "../navigation/controller";
+import { createCounter } from "./counter";
 
 /**
  * 発表中に出す最小限の情報と操作（FR-18、FR-22）。
@@ -14,6 +15,8 @@ export type HudOptions = {
   onNext: () => void;
   /** 全画面が使える環境でだけ渡す。無ければボタンを出さない */
   onToggleFullscreen?: (() => void) | undefined;
+  /** ページ番号を 2 段階で操作したときに呼ぶ（D-22） */
+  onExit: () => void;
 };
 
 export type Hud = {
@@ -21,6 +24,8 @@ export type Hud = {
   update(state: PresentationState): void;
   /** 全画面状態に合わせてボタンの表示を切り替える */
   setFullscreen(active: boolean): void;
+  /** タイマーなどの後始末 */
+  destroy(): void;
 };
 
 export function createHud(options: HudOptions): Hud {
@@ -28,10 +33,9 @@ export function createHud(options: HudOptions): Hud {
   root.className = "mn-hud";
   root.hidden = !options.showPageNumber && !options.showControls;
 
-  const counter = document.createElement("p");
-  counter.className = "mn-hud__counter";
-  counter.hidden = !options.showPageNumber;
-  root.append(counter);
+  const counter = createCounter(options.onExit);
+  counter.root.hidden = !options.showPageNumber;
+  root.append(counter.root);
 
   const actions = document.createElement("div");
   actions.className = "mn-hud__actions";
@@ -54,9 +58,13 @@ export function createHud(options: HudOptions): Hud {
     root,
 
     update(state: PresentationState): void {
-      counter.textContent = `${String(state.current + 1)} / ${String(state.total)}`;
+      counter.update(state);
       previous.disabled = state.current === 0;
       next.disabled = state.current === state.total - 1;
+    },
+
+    destroy(): void {
+      counter.destroy();
     },
 
     setFullscreen(active: boolean): void {

@@ -311,6 +311,49 @@ test.describe("表示", () => {
     expect(Number(hudZ)).toBeGreaterThan(0);
   });
 
+  test("ページ番号は 1 クリックでは入口へ戻らない（D-22）", async ({ page }) => {
+    // 発表中に押してしまっても話が止まらないようにしている
+    await page.locator(".mn-hud__counter").click({ noWaitAfter: true });
+
+    await expect(page.locator(visibleSlide)).toHaveCount(1);
+    await expect(page.locator(".mn-home")).toHaveCount(0);
+
+    // フォーカスが残ると Space でこのボタンが再び押され、送ったつもりが入口へ戻る
+    await expect(page.locator(".mn-hud__counter")).not.toBeFocused();
+
+    await page.keyboard.press("Space");
+    await expect(page.locator(visibleSlide)).toHaveAttribute("data-index", "1");
+  });
+
+  test("ページ番号をダブルクリックしてから押すと入口へ戻る（FR-28）", async ({ page }) => {
+    const counter = page.locator(".mn-hud__counter");
+
+    await counter.dblclick();
+    await expect(counter).toHaveAttribute("data-armed", "true");
+    await expect(counter).toHaveText("原稿を選ぶ");
+
+    await counter.click();
+
+    await expect(page.locator(".mn-home")).toBeVisible();
+    await expect(page.locator(visibleSlide)).toHaveCount(0);
+    await expect(page).not.toHaveURL(/#\//);
+  });
+
+  test("ポインタを乗せ続けてもページ番号が「戻る」に変わる（D-22）", async ({ page }) => {
+    const counter = page.locator(".mn-hud__counter");
+
+    const hud = page.locator(".mn-hud");
+    await expect(hud).toHaveCSS("opacity", "0.2");
+
+    await counter.hover();
+
+    // 800ms 乗せ続けると役割が変わる
+    await expect(counter).toHaveAttribute("data-armed", "true", { timeout: 3000 });
+
+    // 押せる状態は狙えるだけの濃さが要る
+    await expect(hud).toHaveCSS("opacity", "1");
+  });
+
   test("進み具合のバーが位置に応じて伸びる（FR-35）", async ({ page }) => {
     const bar = page.locator(".mn-progress__bar");
     const ratio = async (): Promise<number> =>
