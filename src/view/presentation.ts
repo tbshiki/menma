@@ -9,6 +9,7 @@ import {
 import { connectHash } from "../navigation/hash";
 import { connectKeyboard } from "../navigation/keyboard";
 import { createHud } from "./hud";
+import { createProgress } from "./progress";
 import { renderDeck } from "./renderDeck";
 import { connectScaler } from "./scaler";
 
@@ -47,7 +48,10 @@ export function startPresentation(
     onToggleFullscreen: requestToggleFullscreen,
   });
 
-  view.root.append(hud.root);
+  const progress = createProgress();
+  progress.root.hidden = !deck.meta.showProgress;
+
+  view.root.append(hud.root, progress.root);
   mount.append(view.root);
 
   const cleanups: (() => void)[] = [];
@@ -56,6 +60,7 @@ export function startPresentation(
     controller.subscribe((state) => {
       view.showSlide(state.current);
       hud.update(state);
+      progress.update(state);
     }),
   );
   cleanups.push(connectScaler(view.stage, view.root));

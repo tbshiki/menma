@@ -70,6 +70,7 @@ showPageNumber: true
 | `aspectRatio` | string | `16/9` | 基準比率。MVP は `16/9` のみ |
 | `showPageNumber` | boolean | `true` | ページ番号の表示 |
 | `showControls` | boolean | `true` | 操作 UI の表示 |
+| `showProgress` | boolean | `true` | 画面下端に出る進み具合のバー |
 | `transition` | string | `none` | ページ遷移。MVP は `none` のみ |
 | `externalLinksNewTab` | boolean | `true` | 外部リンクを別タブで開く |
 

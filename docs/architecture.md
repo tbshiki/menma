@@ -227,18 +227,22 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 - クラス名は役割を表す。見た目を表す名前（`.red`、`.big`）を作らない
 - ダークテーマは v1.1。ただし変数構成は最初からテーマ差し替えだけで済む形にする
 
-### 5.2 16:9 フィット
+### 5.2 表示領域へのフィット
 
-基準キャンバスは 1600x900 px 固定。表示領域に合わせて `transform: scale()` で拡縮する。
+基準の幅は 1600px。**幅を表示領域へ合わせ、高さは画面の比率から決める**ので、余白（レターボックス）は出ない（[D-11](./decisions.md)）。
 
 ```ts
-const scale = Math.min(viewportWidth / canvasWidth, viewportHeight / canvasHeight);
+const scale = containerWidth / canvasWidth; // 幅にだけ合わせる
+const canvasHeight = containerHeight / scale; // 残りは高さに使う
 ```
 
-- `.mn-stage` は固定 px サイズを持ち、`transform: scale(var(--mn-scale))` と `transform-origin: center` で中央へ配置する
+- `.mn-stage` は幅 1600px を持ち、`transform: scale(var(--mn-scale))` と `transform-origin: top left` で左上を原点に拡縮する
+- 高さは JS が `--mn-canvas-height` として書き込む。**幅は CSS が正典、高さは画面依存**という分担
 - 再計算は `ResizeObserver` で行う。全画面への遷移でも発火する
 - 再計算は次フレームへまとめ、連続リサイズで描画が詰まらないようにする
-- 基準キャンバスを固定にすることで、文字サイズと余白を px で決め打ちでき、どの画面でも見た目が一致する（発表時の再現性を優先）
+- 幅を基準に固定することで、**画面幅に対する文字の大きさは常に一定**になる。テーマの px 値をそのまま使える
+
+引き換えに、画面の縦横比によって 1 枚に入る縦の量が変わる。原稿を作った画面と投影先の比率が大きく違うときは事前に確認する。
 
 ## 6. ナビゲーション
 

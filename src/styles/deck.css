@@ -4,7 +4,7 @@
  */
 
 .mn-deck {
-  display: grid;
+  position: relative;
   overflow: hidden;
   width: 100%;
   height: 100vh;
@@ -13,21 +13,21 @@
   background: var(--mn-page-bg);
   color: var(--mn-fg);
   font-family: var(--mn-font-sans);
-  place-items: center;
 }
 
 /*
- * 基準キャンバス。ここが 16:9 の正典で、scaler.ts はこの実寸を読んで倍率を決める（設計 5.2）。
- * 大きさを変えるときは JS ではなくこの 2 行を変える。
+ * 基準キャンバス。**幅がここの正典**で、scaler.ts はこの実寸を読んで倍率を決める（設計 5.2）。
+ * 高さは画面の比率で変わるため scaler.ts が --mn-canvas-height へ書き込む。
+ * 左上を原点に拡大するので、表示領域をちょうど埋める。
  */
 .mn-stage {
   position: relative;
   width: 1600px;
-  height: 900px;
+  height: var(--mn-canvas-height, 900px);
   flex: none;
   background: var(--mn-bg);
   transform: scale(var(--mn-scale, 1));
-  transform-origin: center center;
+  transform-origin: top left;
 }
 
 .mn-slide {
@@ -224,6 +224,38 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mn-hud {
+    transition: none;
+  }
+}
+
+/* ---- 進み具合のバー（FR-35） -------------------------------------------- */
+
+.mn-progress {
+  position: fixed;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--mn-rule);
+  pointer-events: none;
+}
+
+.mn-progress[hidden] {
+  display: none;
+}
+
+.mn-progress__bar {
+  width: 100%;
+  height: 100%;
+  background: var(--mn-accent);
+  transform: scaleX(var(--mn-progress, 0));
+  transform-origin: left center;
+  transition: transform 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mn-progress__bar {
     transition: none;
   }
 }

@@ -19,7 +19,12 @@ export type FrontMatterResult = {
 const DELIMITER = /^---\s*$/;
 
 const STRING_KEYS = ["title", "author", "lang"] as const;
-const BOOLEAN_KEYS = ["showPageNumber", "showControls", "externalLinksNewTab"] as const;
+const BOOLEAN_KEYS = [
+  "showPageNumber",
+  "showControls",
+  "showProgress",
+  "externalLinksNewTab",
+] as const;
 /** 取りうる値が決まっているキー。MVP ではどちらも 1 種類しか受け付けない */
 const ENUM_KEYS = {
   aspectRatio: ["16/9"],
