@@ -9,7 +9,7 @@
 | --- | --- |
 | Node.js | 20 以上（開発・ビルド時のみ必要。実行環境には不要） |
 | pnpm | `package.json` の `packageManager` に固定。他のパッケージマネージャーを使わない |
-| OS | AI 開発基盤のスクリプトが PowerShell のため Windows 前提（6 章） |
+| OS | AI 開発基盤のスクリプトが PowerShell のため Windows 前提（7 章） |
 
 ## 2. セットアップ
 
@@ -37,14 +37,14 @@ pnpm dev
 | `pnpm lint` | ESLint |
 | `pnpm format` / `pnpm format:check` | Prettier（対象はコードのみ。`*.md` と `.claude/` は除外） |
 | `pnpm test` / `pnpm test:watch` | 単体テスト（Vitest） |
+| `pnpm test:e2e` | E2E（Playwright / Chromium）。初回は `pnpm exec playwright install chromium` が要る |
+| `pnpm deploy` | ビルドして Cloudflare Pages へ手動デプロイ（5.2） |
 
 サブディレクトリ配信を試すときはベースパスを環境変数で渡す。
 
 ```powershell
 $env:MENMA_BASE = "/slides/"; pnpm build
 ```
-
-E2E（`pnpm test:e2e`）はロードマップ M2 で追加する。
 
 ## 4. 変更するときの流れ
 
@@ -53,11 +53,59 @@ E2E（`pnpm test:e2e`）はロードマップ M2 で追加する。
 3. 影響範囲に応じて `pnpm typecheck` → `pnpm test` → `pnpm lint` → `pnpm build` の順に検証する
 4. AI 設定（`AGENTS.md`、`.claude/`、`skills/`、`scripts/`）を触ったら `scripts/check-ai-config.ps1` を実行する
 
-## 5. 生成物
+## 5. デプロイ（Cloudflare Pages）
+
+配信先は Cloudflare Pages（[D-17](./decisions.md)）。成果物は `dist/` の静的ファイルだけで、サーバ処理は要らない。
+
+ビルドの設定は `wrangler.toml` が正典。GitHub 連携でも手動デプロイでも同じ設定を使う。
+
+```toml
+name = "menma"
+pages_build_output_dir = "dist"
+```
+
+### 5.1 GitHub 連携（通常の運用）
+
+`main` への push で自動デプロイされる。初回だけ Cloudflare ダッシュボードでの接続が必要。
+
+1. Cloudflare ダッシュボード → Workers & Pages → Create → Pages → Connect to Git
+2. リポジトリ `tbshiki/menma` を選び、本番ブランチに `main` を指定
+3. ビルド設定
+   - フレームワークプリセット: なし（None）
+   - ビルドコマンド: `pnpm build`
+   - ビルド出力ディレクトリ: `dist`（`wrangler.toml` にもあるので変更不要）
+   - Node のバージョン: `.node-version`（22）が読まれる
+4. 保存してデプロイ
+
+Pull Request ごとにプレビュー URL が発行される。発表前の確認はプレビュー URL で行い、本番 URL は `main` の内容に保つ。
+
+### 5.2 wrangler から手動デプロイ
+
+ダッシュボードを待たずに今の内容を上げたいときに使う。**初回はブラウザ認証が必要。**
+
+```powershell
+# 1. Cloudflare へログイン（ブラウザが開く。実行するのは人間）
+npx wrangler login
+
+# 2. ビルドしてデプロイ
+pnpm deploy
+```
+
+`pnpm deploy` は `pnpm build` を挟むので、ビルド漏れの状態を上げてしまうことがない。
+
+GitHub 連携と手動デプロイは同じプロジェクトへ向く。手動で上げた内容は次回の push で上書きされるため、**確定させたい変更は必ず main へ入れる。**
+
+### 5.3 デプロイ前に確認すること
+
+- `pnpm build` と `pnpm test:e2e` が通っている
+- `dist/` をローカルで `pnpm preview` して表示を確認した
+- 原稿に公開したくない内容が含まれていない（`*.pages.dev` は誰でも開ける）
+
+## 6. 生成物
 
 `node_modules/`、`dist/`、`.vite/`、Playwright の出力は生成物。直接編集せず、入力を直して再生成する。すべて `.gitignore` 済み。
 
-## 6. AI 開発基盤
+## 7. AI 開発基盤
 
 Codex と Claude Code の両方で使う共通基盤を導入している。構成は `ai-dev-workspace-template` を参照元として導入したもの。
 
@@ -72,13 +120,13 @@ Codex と Claude Code の両方で使う共通基盤を導入している。構�
 | `.claude/hooks/` | 実行時のガードレール（秘密情報のアクセス拒否、追跡済みファイルの自動許可） |
 | `scripts/` | symlink 同期とヘルスチェック |
 
-### 6.1 Windows 専用
+### 7.1 Windows 専用
 
 **この基盤は Windows 専用。** PowerShell 5.1 と 7 の双方で動作する。`.claude/settings.json` の hook は `powershell.exe` を決め打ちで起動し、スクリプトはすべて `*.ps1`、symlink 生成に Win32 API を直接呼び出す。
 
 macOS / Linux では hook が起動しないため、秘密情報のアクセス拒否も自動許可の除外も効かない。他プラットフォームで使う場合は hook をシェルスクリプトへ移植し、`settings.json` の `command` を書き換える。symlink は `ln -s ../skills .agents/skills` と `ln -s ../skills .claude/skills` で代替できる。
 
-### 6.2 symlink の作成
+### 7.2 symlink の作成
 
 `.agents/skills` と `.claude/skills` は Git 管理しない生成 symlink。クローン後や新しい端末では作り直す。
 
@@ -88,16 +136,16 @@ VS Code でフォルダを開くと `AI: Sync skill symlinks` タスクが自動
 
 リンク作成に失敗しても、実ディレクトリのコピーや junction には置き換えない。正典が二重化するため。失敗時は理由と対処を示すアラートを表示し、終了コード 1 で停止する（最も多い原因は開発者モードが無効なこと）。
 
-### 6.3 ヘルスチェック
+### 7.3 ヘルスチェック
 
 AI 設定を変更したら `scripts/check-ai-config.ps1` を実行する。正典ファイル、権限、hook の実挙動、秘密情報保護の3箇所同期、スキル表と実体の双方向一致、symlink のリンク先、`*.ps1` の UTF-8 BOM などを検証し、失敗時は `[FAIL]` と理由を表示して終了コード 1 を返す。
 
-### 6.4 秘密情報の扱い
+### 7.4 秘密情報の扱い
 
 `.env` 系、`.dev.vars` 系、鍵・証明書、SSH 秘密鍵、レジストリ認証情報、`secrets.*` などは Git 対象外で、AI からの読み取りも拒否している。
 
 保護は **`.gitignore`（コミット防止）、`.claude/settings.json` の `permissions.deny`（Read ツール）、`.claude/hooks/deny-secret-file-access.ps1`（シェルコマンド）の3箇所に重複して定義**してある。片方だけ変更すると経路によって守られたり守られなかったりするため、対象を変えるときは3箇所を揃える。`*.example` / `*.sample` と SSH 公開鍵（`*.pub`）は誤検知を避けるため除外している。
 
-### 6.5 ファイルエンコーディング
+### 7.5 ファイルエンコーディング
 
 `*.ps1` は **UTF-8 BOM 付き・CRLF**、通常のテキストは UTF-8・LF で保存する。Windows PowerShell 5.1 は BOM なし UTF-8 をレガシーコードページとして読むため、日本語を含むスクリプトは BOM がないと壊れる。`.editorconfig` と `.gitattributes` に規則を定義しているが、AI やツールの書き込みには適用されないため、ヘルスチェックで機械的に検証している。

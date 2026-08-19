@@ -1,0 +1,7 @@
+# Cloudflare Pages の設定。
+#
+# GitHub 連携のビルドでも wrangler からの手動デプロイでも、このファイルが正典になる。
+# ダッシュボード側で出力先を設定し直す必要はない。
+name = "menma"
+compatibility_date = "2026-08-19"
+pages_build_output_dir = "dist"

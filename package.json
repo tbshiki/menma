@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "deploy": "pnpm build && wrangler pages deploy"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -30,7 +31,8 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.67.0",
     "vite": "^8.2.1",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.124.0"
   },
   "dependencies": {
     "markdown-it": "^15.0.0"
