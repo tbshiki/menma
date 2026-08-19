@@ -1,6 +1,6 @@
 {
   "name": "menma",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Markdown を書いてブラウザでそのまま発表できる、軽量な Web スライドシステム",
   "type": "module",
@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "deploy": "pnpm build && wrangler pages deploy"
+    "deploy": "pnpm build && wrangler deploy"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
