@@ -199,6 +199,7 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 ```css
 :root {
   /* 色 */
+  --mn-page-bg: #ffffff; /* キャンバスの外側（レターボックス） */
   --mn-bg: #ffffff;
   --mn-fg: #14181d;
   --mn-muted: #5b6570;
