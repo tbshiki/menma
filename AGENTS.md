@@ -79,7 +79,7 @@ Markdown を書いてブラウザで発表できる、軽量な Web スライド
 | `docs/requirements.md` | 作るもの・作らないものを判断するとき（FR-xx / NFR-xx） |
 | `docs/spec-markdown.md` | 原稿の記法に関わる実装をするとき |
 | `docs/architecture.md` | コードを書く直前（モジュール境界、DOM、命名、テスト方針） |
-| `docs/roadmap.md` | 次に何をやるか決めるとき（M0〜M5） |
+| `docs/roadmap.md` | 次に何をやるか決めるとき（M0〜M6） |
 | `docs/decisions.md` | 「なぜそうなっているか」と未決事項を確認するとき |
 | `docs/development.md` | セットアップ、コマンド、AI 開発基盤の構成を確認するとき（手順書） |
 

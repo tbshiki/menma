@@ -21,6 +21,16 @@ async function totalPages(page: Page): Promise<number> {
 }
 
 /**
+ * サンプルを開いて発表画面まで進める。入口画面が挟まるようになったため、
+ * スライドの検証はどれもここから始める。
+ */
+async function openSample(page: Page): Promise<void> {
+  await page.goto("/");
+  await page.getByRole("button", { name: "サンプルスライドを見る" }).click();
+  await expect(page.locator(visibleSlide)).toHaveCount(1);
+}
+
+/**
  * 開いた状態からハッシュだけを書き換える（アドレスバー編集や共有リンクの踏み直しに相当）。
  * ページはリロードされず hashchange だけが起きる経路で、full load とは別物。
  */
@@ -31,8 +41,7 @@ async function changeHash(page: Page, hash: string): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(visibleSlide)).toHaveCount(1);
+  await openSample(page);
 });
 
 test("初期表示は 1 ページ目で、ハッシュが #/1 になる", async ({ page }) => {
@@ -179,11 +188,14 @@ test("ページ番号が現在位置を示す", async ({ page }) => {
 });
 
 /**
- * ページを読み込み直す経路。`beforeEach` の後にハッシュだけ変えると hashchange しか起きず、
+ * ページを読み込み直す経路。開いた状態でハッシュだけ変えると hashchange しか起きず、
  * 初期化コードを通らない。共有 URL を新しいタブで開く場合はこちらが本番の経路になる。
+ *
+ * 原稿はブラウザに保存されているものを使うため、先にサンプルを開いておく。
  */
 test.describe("読み込み直後の初期位置", () => {
   test("#/5 を新規に読み込むと 5 ページ目から始まる", async ({ page }) => {
+    await openSample(page);
     await page.goto("/#/5");
     await page.reload();
 
@@ -192,6 +204,7 @@ test.describe("読み込み直後の初期位置", () => {
   });
 
   test("不正なハッシュを新規に読み込んでも 1 ページ目から始まる", async ({ page }) => {
+    await openSample(page);
     await page.goto("/#/abc");
     await page.reload();
 
@@ -199,19 +212,19 @@ test.describe("読み込み直後の初期位置", () => {
     await expect(page).toHaveURL(/#\/1$/);
   });
 
-  test("ハッシュ無しで読み込むと #/1 へ正規化される", async ({ page }) => {
+  test("ハッシュ無しで読み込むと入口画面へ戻る", async ({ page }) => {
+    await openSample(page);
     await page.goto("/");
     await page.reload();
 
-    expect(await currentPage(page)).toBe(1);
-    await expect(page).toHaveURL(/#\/1$/);
+    await expect(page.locator(".mn-home")).toBeVisible();
+    await expect(page.locator(visibleSlide)).toHaveCount(0);
   });
 });
 
 test.describe("表示", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator(visibleSlide)).toHaveCount(1);
+    await openSample(page);
   });
 
   test("最初の描画からキャンバスが表示領域に収まっている", async ({ page }) => {
