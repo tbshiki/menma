@@ -13,6 +13,7 @@
   background: var(--mn-page-bg);
   color: var(--mn-fg);
   font-family: var(--mn-font-sans);
+  /* 16:9 に収めた結果できる余白は、キャンバスを中央に置いて左右（または上下）へ均等に配る */
   place-items: center;
 }
 
@@ -153,26 +154,41 @@
 
 /* ---- 操作 UI ------------------------------------------------------------ */
 
+/*
+ * ページ番号は画面の左下、操作ボタンは右下（FR-18）。
+ *
+ * スライドではなく画面を基準にするので、拡縮されても位置が動かない。
+ * 文字色は背景の明るさに応じて renderDeck.ts が --mn-hud-fg を決める（D-21）。
+ */
 .mn-hud {
   position: fixed;
-  right: 1.5vmin;
-  bottom: 1.5vmin;
+  z-index: 2;
+  right: 10px;
+  bottom: 8px;
+  left: 10px;
   display: flex;
   align-items: center;
-  color: var(--mn-fg);
+  justify-content: space-between;
+  color: var(--mn-hud-fg, var(--mn-fg));
   font-family: var(--mn-font-sans);
-  font-size: 14px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
-  gap: 12px;
+  gap: 10px;
   /* 発表の邪魔をしない。触れたときだけはっきり見せる */
-  opacity: 0.25;
+  opacity: 0.2;
   /* 本文の上に重なるので、操作を受けるのはボタンだけにする */
   pointer-events: none;
   transition: opacity 0.2s ease-out;
 }
 
-.mn-hud:hover,
-.mn-hud:focus-within {
+/*
+ * 親は pointer-events: none なので `.mn-hud:hover` は成立しない。
+ * 触れたかどうかは、操作を受け付ける子の :hover を :has() で拾う。
+ * ページ番号が「戻る」に変わったときも、狙えるようはっきり見せる（D-22）。
+ */
+.mn-hud:has(:hover),
+.mn-hud:focus-within,
+.mn-hud:has(.mn-hud__counter[data-armed="true"]) {
   opacity: 1;
 }
 
@@ -180,8 +196,32 @@
   display: none;
 }
 
+/*
+ * 画面の隅は、比率によって「余白の上」にも「スライドの上」にもなる。
+ * どちらでも読めるよう、うっすら地を敷く（D-21）。
+ */
+.mn-hud__counter,
+.mn-hud__button {
+  border-radius: 4px;
+  background: var(--mn-hud-bg, rgb(255 255 255 / 0.75));
+}
+
+/* ページ番号は 2 段階で「入口へ戻る」に変わるボタン（D-22） */
 .mn-hud__counter {
   margin: 0;
+  padding: 2px 6px;
+  border: none;
+  color: inherit;
+  cursor: default;
+  font: inherit;
+  /* 左端に置く。非表示でも右側のボタンは右端のままにする */
+  margin-inline-end: auto;
+  pointer-events: auto;
+}
+
+.mn-hud__counter[data-armed="true"] {
+  border: 1px solid currentcolor;
+  cursor: pointer;
 }
 
 .mn-hud__counter[hidden] {
@@ -190,6 +230,7 @@
 
 .mn-hud__actions {
   display: flex;
+  margin-inline-start: auto;
   gap: 4px;
 }
 
@@ -198,17 +239,20 @@
 }
 
 .mn-hud__button {
-  width: 2em;
-  height: 2em;
+  width: 1.7em;
+  height: 1.7em;
   padding: 0;
-  border: 1px solid var(--mn-rule);
-  border-radius: var(--mn-radius);
-  background: var(--mn-bg);
+  border: 1px solid currentcolor;
   color: inherit;
   cursor: pointer;
-  font-size: 1.1em;
+  font-size: 1em;
   line-height: 1;
+  opacity: 0.7;
   pointer-events: auto;
+}
+
+.mn-hud__button:hover:enabled {
+  opacity: 1;
 }
 
 .mn-hud__button:disabled {
@@ -224,6 +268,39 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mn-hud {
+    transition: none;
+  }
+}
+
+/* ---- 進み具合のバー（FR-35） -------------------------------------------- */
+
+.mn-progress {
+  position: fixed;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--mn-rule);
+  pointer-events: none;
+}
+
+.mn-progress[hidden] {
+  display: none;
+}
+
+.mn-progress__bar {
+  width: 100%;
+  height: 100%;
+  /* 原稿から progressColor が指定されていればそれを使う（FR-36） */
+  background: var(--mn-progress-color, var(--mn-accent));
+  transform: scaleX(var(--mn-progress, 0));
+  transform-origin: left center;
+  transition: transform 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mn-progress__bar {
     transition: none;
   }
 }

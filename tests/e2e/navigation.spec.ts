@@ -227,7 +227,7 @@ test.describe("表示", () => {
     await openSample(page);
   });
 
-  test("最初の描画からキャンバスが表示領域に収まっている", async ({ page }) => {
+  test("最初の描画から 16:9 を保って表示領域に収まっている", async ({ page }) => {
     // リサイズを挟まずに確認する。初回の倍率計算が誤っていても、
     // 画面サイズを変えたあとに直ってしまうと気づけないため
     const viewport = page.viewportSize();
@@ -245,7 +245,7 @@ test.describe("表示", () => {
     expect(box.width / box.height).toBeCloseTo(16 / 9, 2);
   });
 
-  test("ウィンドウの比率を変えても 16:9 を保って表示領域に収まる", async ({ page }) => {
+  test("ウィンドウの比率を変えても 16:9 のまま、縦か横がいっぱいになる", async ({ page }) => {
     for (const size of [
       { width: 1280, height: 720 },
       { width: 800, height: 1200 },
@@ -266,8 +266,109 @@ test.describe("表示", () => {
         expect(box.width).toBeLessThanOrEqual(size.width + 1);
         expect(box.height).toBeLessThanOrEqual(size.height + 1);
         expect(box.width / box.height).toBeCloseTo(16 / 9, 2);
+
+        // どちらか一方は画面ぴったりに埋まる（FR-09）
+        const fillsWidth = box.width >= size.width - 1;
+        const fillsHeight = box.height >= size.height - 1;
+        expect(fillsWidth || fillsHeight).toBe(true);
       }).toPass({ timeout: 2000 });
     }
+  });
+
+  test("ページ番号は左下、操作ボタンは右下に出る（FR-18）", async ({ page }) => {
+    const viewport = page.viewportSize();
+    const counterBox = await page.locator(".mn-hud__counter").boundingBox();
+    const actionsBox = await page.locator(".mn-hud__actions").boundingBox();
+
+    expect(viewport).not.toBeNull();
+    expect(counterBox).not.toBeNull();
+    expect(actionsBox).not.toBeNull();
+
+    if (!viewport || !counterBox || !actionsBox) {
+      return;
+    }
+
+    // 左半分と右半分に分かれている
+    expect(counterBox.x).toBeLessThan(viewport.width / 2);
+    expect(actionsBox.x).toBeGreaterThan(viewport.width / 2);
+
+    // どちらも画面下部
+    expect(counterBox.y).toBeGreaterThan(viewport.height / 2);
+    expect(actionsBox.y).toBeGreaterThan(viewport.height / 2);
+  });
+
+  test("操作 UI と進み具合のバーは画面基準で置かれる（FR-18、FR-35）", async ({ page }) => {
+    // キャンバスの中に入れるとスライドと一緒に拡縮されて位置が動く
+    await expect(page.locator(".mn-deck > .mn-hud")).toHaveCount(1);
+    await expect(page.locator(".mn-deck > .mn-progress")).toHaveCount(1);
+
+    await expect(page.locator(".mn-hud")).toHaveCSS("position", "fixed");
+
+    // cover の背景画像などに埋もれないよう、重なり順も明示している
+    const hudZ = await page
+      .locator(".mn-hud")
+      .evaluate((element) => getComputedStyle(element).zIndex);
+    expect(Number(hudZ)).toBeGreaterThan(0);
+  });
+
+  test("ページ番号は 1 クリックでは入口へ戻らない（D-22）", async ({ page }) => {
+    // 発表中に押してしまっても話が止まらないようにしている
+    await page.locator(".mn-hud__counter").click({ noWaitAfter: true });
+
+    await expect(page.locator(visibleSlide)).toHaveCount(1);
+    await expect(page.locator(".mn-home")).toHaveCount(0);
+
+    // フォーカスが残ると Space でこのボタンが再び押され、送ったつもりが入口へ戻る
+    await expect(page.locator(".mn-hud__counter")).not.toBeFocused();
+
+    await page.keyboard.press("Space");
+    await expect(page.locator(visibleSlide)).toHaveAttribute("data-index", "1");
+  });
+
+  test("ページ番号をダブルクリックしてから押すと入口へ戻る（FR-28）", async ({ page }) => {
+    const counter = page.locator(".mn-hud__counter");
+
+    await counter.dblclick();
+    await expect(counter).toHaveAttribute("data-armed", "true");
+    await expect(counter).toHaveText("原稿を選ぶ");
+
+    await counter.click();
+
+    await expect(page.locator(".mn-home")).toBeVisible();
+    await expect(page.locator(visibleSlide)).toHaveCount(0);
+    await expect(page).not.toHaveURL(/#\//);
+  });
+
+  test("ポインタを乗せ続けてもページ番号が「戻る」に変わる（D-22）", async ({ page }) => {
+    const counter = page.locator(".mn-hud__counter");
+
+    const hud = page.locator(".mn-hud");
+    await expect(hud).toHaveCSS("opacity", "0.2");
+
+    await counter.hover();
+
+    // 800ms 乗せ続けると役割が変わる
+    await expect(counter).toHaveAttribute("data-armed", "true", { timeout: 3000 });
+
+    // 押せる状態は狙えるだけの濃さが要る
+    await expect(hud).toHaveCSS("opacity", "1");
+  });
+
+  test("進み具合のバーが位置に応じて伸びる（FR-35）", async ({ page }) => {
+    const bar = page.locator(".mn-progress__bar");
+    const ratio = async (): Promise<number> =>
+      bar.evaluate((element) =>
+        Number(getComputedStyle(element).getPropertyValue("--mn-progress")),
+      );
+
+    await expect(page.locator(".mn-progress")).toBeVisible();
+    expect(await ratio()).toBe(0);
+
+    await page.keyboard.press("ArrowRight");
+    expect(await ratio()).toBeGreaterThan(0);
+
+    await page.keyboard.press("End");
+    expect(await ratio()).toBe(1);
   });
 
   test("操作ボタンから移動でき、端では無効になる", async ({ page }) => {

@@ -36,8 +36,13 @@ export type DeckMeta = {
   aspectRatio: string;
   showPageNumber: boolean;
   showControls: boolean;
+  showProgress: boolean;
   transition: "none";
   externalLinksNewTab: boolean;
+  /** スライドの外側の色。空なら テーマの値を使う */
+  pageBackground: string;
+  /** 進み具合のバーの色。空ならテーマの値を使う */
+  progressColor: string;
 };
 
 export type Slide = {
@@ -95,6 +100,9 @@ export const DEFAULT_DECK_META: Readonly<DeckMeta> = Object.freeze({
   aspectRatio: "16/9",
   showPageNumber: true,
   showControls: true,
+  showProgress: true,
   transition: "none",
   externalLinksNewTab: true,
+  pageBackground: "",
+  progressColor: "",
 });

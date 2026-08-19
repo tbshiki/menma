@@ -26,6 +26,12 @@ function createElement(size: { width: number; height: number }): FakeElement {
   };
 }
 
+/** 最後に書き込まれたカスタムプロパティを読む */
+function lastValue(element: FakeElement, name: string): string | undefined {
+  const calls = vi.mocked(element.style.setProperty).mock.calls;
+  return calls.filter((call) => call[0] === name).at(-1)?.[1];
+}
+
 const observed: unknown[] = [];
 let notify: (() => void) | undefined;
 let disconnected = 0;
@@ -77,22 +83,32 @@ function connect(stage: FakeElement, container: FakeElement): () => void {
 }
 
 describe("connectScaler", () => {
-  it("幅と高さのうち小さいほうの比率を倍率にする", () => {
+  it("横長の画面では高さいっぱいにする", () => {
     const stage = createElement({ width: 1600, height: 900 });
-    const container = createElement({ width: 1568, height: 744 });
+    const container = createElement({ width: 3200, height: 900 });
 
+    // 幅の比率は 2 だが、それでは縦がはみ出す。小さいほうの 1 を採る
     connect(stage, container);
 
-    expect(stage.style.setProperty).toHaveBeenLastCalledWith("--mn-scale", String(744 / 900));
+    expect(lastValue(stage, "--mn-scale")).toBe(String(1));
   });
 
-  it("横に余裕がない場合は幅の比率を使う", () => {
+  it("縦長の画面では幅いっぱいにする", () => {
     const stage = createElement({ width: 1600, height: 900 });
     const container = createElement({ width: 800, height: 1200 });
 
     connect(stage, container);
 
-    expect(stage.style.setProperty).toHaveBeenLastCalledWith("--mn-scale", String(0.5));
+    expect(lastValue(stage, "--mn-scale")).toBe(String(0.5));
+  });
+
+  it("16:9 の画面ではちょうど収まる", () => {
+    const stage = createElement({ width: 1600, height: 900 });
+    const container = createElement({ width: 3200, height: 1800 });
+
+    connect(stage, container);
+
+    expect(lastValue(stage, "--mn-scale")).toBe(String(2));
   });
 
   it("収める先とキャンバスの両方を監視する", () => {
@@ -127,7 +143,7 @@ describe("connectScaler", () => {
     notify?.();
     runFrames();
 
-    expect(stage.style.setProperty).toHaveBeenLastCalledWith("--mn-scale", String(1));
+    expect(lastValue(stage, "--mn-scale")).toBe(String(1));
   });
 
   it("通知が続けて来ても 1 フレームに 1 回だけ計算する", () => {

@@ -70,6 +70,9 @@ showPageNumber: true
 | `aspectRatio` | string | `16/9` | 基準比率。MVP は `16/9` のみ |
 | `showPageNumber` | boolean | `true` | ページ番号の表示 |
 | `showControls` | boolean | `true` | 操作 UI の表示 |
+| `showProgress` | boolean | `true` | 画面下端に出る進み具合のバー |
+| `pageBackground` | string | テーマの値 | スライドの外側（16:9 に収めた余白）の色 |
+| `progressColor` | string | テーマの値 | 進み具合のバーの色 |
 | `transition` | string | `none` | ページ遷移。MVP は `none` のみ |
 | `externalLinksNewTab` | boolean | `true` | 外部リンクを別タブで開く |
 
@@ -92,7 +95,11 @@ MVP の Front Matter は**フラットな `key: value` のみ**を解釈する�
 - 値の前後の空白は取り除く。`"` または `'` で囲んだ場合は囲みを外す
 - boolean は `true` / `false`（大文字小文字を区別しない）のみ。それ以外は型エラー
 - 取りうる値が決まっているキー（MVP では `aspectRatio` は `16/9`、`transition` は `none`）に他の値を書いた場合も型エラーとして扱い、既定値へフォールバックする
-- `#` から行末まではコメント。ただしコメントと認めるのは**行頭または空白の直後にある `#`** だけで、引用符の内側も対象外（`title: C# 入門` の `#` は値の一部）
+- 色（`pageBackground` / `progressColor`）は CSS が解釈できる書き方をそのまま渡す（`#fff`、`rgb(0 0 0)`、`tomato` など）。解釈できない値は無視され、テーマの色のままになる
+- `#` から行末まではコメント。ただしコメントと認めるのは**前が行頭か空白で、後ろが空白か行末**の `#` だけ。引用符の内側も対象外
+  - `title: C# 入門` → `#` は値の一部
+  - `pageBackground: #101418` → `#` は値の一部（色として扱える）
+  - `title: menma # 補足` → 2 つ目の `#` からがコメント
 - 未知のキーは無視し、開発時のみ警告を出す
 - 型が合わない値は既定値へフォールバックし、開発時のみ警告を出す
 - Front Matter を閉じる `---` が見つからない場合はエラー（FR-21）

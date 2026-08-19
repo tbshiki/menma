@@ -3,6 +3,7 @@ import sampleText from "../slides.md?raw";
 import { DeckError } from "./deck/errors";
 import { parseDeck } from "./deck/parseDeck";
 import { readSourceText, sourceAssets, type DeckSource } from "./deck/source";
+import { loadAppearance, saveAppearance, type Appearance } from "./storage/appearance";
 import { clearSource, loadSource, saveSource } from "./storage/deckStore";
 import type { Deck } from "./deck/types";
 import { createAssetBindings, findMissingAssets, type AssetBindings } from "./view/assets";
@@ -20,6 +21,7 @@ import { startPresentation } from "./view/presentation";
  */
 export async function startApp(mount: HTMLElement, target: Window): Promise<() => void> {
   let source: DeckSource | undefined = await loadSource(target);
+  let appearance: Appearance = loadAppearance(target);
 
   let home: HomeView | undefined;
   let stopPresentation: (() => void) | undefined;
@@ -58,6 +60,11 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
             source = undefined;
           }
         : undefined,
+      appearance,
+      onAppearanceChange: (next) => {
+        appearance = next;
+        saveAppearance(target, next);
+      },
     });
     mount.append(home.root);
   };
@@ -71,7 +78,7 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
 
     stop();
     bindings = createAssetBindings(sourceAssets(next));
-    stopPresentation = startPresentation(deck, bindings, mount, target);
+    stopPresentation = startPresentation(deck, bindings, appearance, mount, target, exitToHome);
   };
 
   /** 原稿を受け取って発表へ移る。読めなければ入口へ理由を出す（FR-29） */
@@ -126,6 +133,20 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
     } finally {
       probe.release();
     }
+  };
+
+  /**
+   * 発表画面から入口へ戻る（FR-28、D-22）。
+   *
+   * ハッシュを外して入口を出す。`pushState` は `popstate` を起こさないので、
+   * 画面の切り替えはここで明示的に行う。
+   */
+  const exitToHome = (): void => {
+    if (target.location.hash !== "") {
+      const { pathname, search } = target.location;
+      target.history.pushState(null, "", `${pathname}${search}`);
+    }
+    showHome();
   };
 
   /** URL と手持ちの原稿から、いま出すべき画面を決める */

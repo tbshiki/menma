@@ -1,3 +1,4 @@
+import type { Appearance } from "../storage/appearance";
 import type { Deck } from "../deck/types";
 import type { AssetBindings } from "./assets";
 import { NavigationController } from "../navigation/controller";
@@ -9,6 +10,7 @@ import {
 import { connectHash } from "../navigation/hash";
 import { connectKeyboard } from "../navigation/keyboard";
 import { createHud } from "./hud";
+import { createProgress } from "./progress";
 import { renderDeck } from "./renderDeck";
 import { connectScaler } from "./scaler";
 
@@ -21,10 +23,12 @@ import { connectScaler } from "./scaler";
 export function startPresentation(
   deck: Deck,
   bindings: AssetBindings,
+  appearance: Appearance,
   mount: HTMLElement,
   target: Window,
+  onExit: () => void,
 ): () => void {
-  const view = renderDeck(deck, bindings);
+  const view = renderDeck(deck, bindings, appearance);
   const controller = new NavigationController(deck.slides.length);
 
   // 全画面は使える環境でだけ提供する（FR-17 は Progressive Enhancement）
@@ -45,9 +49,14 @@ export function startPresentation(
       controller.next();
     },
     onToggleFullscreen: requestToggleFullscreen,
+    onExit,
   });
 
-  view.root.append(hud.root);
+  const progress = createProgress();
+  progress.root.hidden = !deck.meta.showProgress;
+
+  // 操作 UI と進み具合のバーは画面基準。拡縮されても位置が動かない（FR-18、FR-35）
+  view.root.append(hud.root, progress.root);
   mount.append(view.root);
 
   const cleanups: (() => void)[] = [];
@@ -56,6 +65,7 @@ export function startPresentation(
     controller.subscribe((state) => {
       view.showSlide(state.current);
       hud.update(state);
+      progress.update(state);
     }),
   );
   cleanups.push(connectScaler(view.stage, view.root));
@@ -74,6 +84,7 @@ export function startPresentation(
     for (const cleanup of cleanups) {
       cleanup();
     }
+    hud.destroy();
     view.root.remove();
   };
 }

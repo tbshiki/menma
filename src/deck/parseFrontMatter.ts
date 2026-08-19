@@ -18,8 +18,13 @@ export type FrontMatterResult = {
 
 const DELIMITER = /^---\s*$/;
 
-const STRING_KEYS = ["title", "author", "lang"] as const;
-const BOOLEAN_KEYS = ["showPageNumber", "showControls", "externalLinksNewTab"] as const;
+const STRING_KEYS = ["title", "author", "lang", "pageBackground", "progressColor"] as const;
+const BOOLEAN_KEYS = [
+  "showPageNumber",
+  "showControls",
+  "showProgress",
+  "externalLinksNewTab",
+] as const;
 /** 取りうる値が決まっているキー。MVP ではどちらも 1 種類しか受け付けない */
 const ENUM_KEYS = {
   aspectRatio: ["16/9"],
@@ -132,8 +137,9 @@ function normalizeValue(raw: string): string {
       continue;
     }
 
-    // コメントと認めるのは空白の直後の # だけ。`title: C# 入門` の # を落とさないため
-    if (char === "#" && (index === 0 || /\s/.test(raw[index - 1] ?? ""))) {
+    // コメントと認めるのは「前が空白」かつ「後ろが空白か行末」の # だけ。
+    // `title: C# 入門` の # を値の一部として残し、`pageBackground: #101418` も色として扱うため
+    if (char === "#" && isCommentStart(raw, index)) {
       end = index;
       break;
     }
@@ -231,4 +237,17 @@ function isBooleanKey(key: string): key is BooleanKey {
 
 function isEnumKey(key: string): key is EnumKey {
   return Object.hasOwn(ENUM_KEYS, key);
+}
+
+/**
+ * その `#` がコメントの始まりかを判定する。
+ *
+ * 前が行頭か空白で、後ろが空白か行末のときだけコメントとみなす。
+ * `#101418` のように文字が続くものは値の一部（色など）として残す。
+ */
+function isCommentStart(raw: string, index: number): boolean {
+  const before = index === 0 ? " " : (raw[index - 1] ?? "");
+  const after = raw[index + 1];
+
+  return /\s/.test(before) && (after === undefined || /\s/.test(after));
 }

@@ -57,8 +57,12 @@ export type DeckMeta = {
   aspectRatio: string;
   showPageNumber: boolean;
   showControls: boolean;
+  showProgress: boolean;
   transition: "none";
   externalLinksNewTab: boolean;
+  /** 空ならテーマの値を使う。UI の指定があればそちらが優先される（D-21） */
+  pageBackground: string;
+  progressColor: string;
 };
 
 export type Slide = {
@@ -123,6 +127,8 @@ src/
 │   ├── renderDeck.ts          # Deck → DOM
 │   ├── renderSlide.ts
 │   ├── cssValue.ts            # 原稿由来の値を CSS へ渡す前の検査
+│   ├── colors.ts              # 色の決め方と明暗の判定（D-21）
+│   ├── progress.ts            # 進み具合のバー
 │   ├── hud.ts                 # ページ番号・操作 UI
 │   ├── errorScreen.ts
 │   └── scaler.ts              # 16:9 フィット
@@ -132,6 +138,10 @@ src/
 │   ├── keyboard.ts
 │   ├── hash.ts
 │   └── fullscreen.ts
+│
+├── storage/                   # ブラウザへの保存。原稿は IndexedDB、設定は localStorage
+│   ├── deckStore.ts           # 原稿と画像（15.3）
+│   └── appearance.ts          # 見た目の指定（D-21）
 │
 ├── styles/
 │   ├── reset.css
@@ -169,14 +179,17 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
       <!-- 表示していないスライドは hidden 属性を持つ -->
     </div>
 
+    <!-- 操作 UI と進み具合のバーは画面基準（キャンバスの外）。ページ番号が左下、ボタンが右下 -->
     <div class="mn-hud">
-      <p class="mn-hud__counter">3 / 24</p>
+      <button type="button" class="mn-hud__counter" data-armed="false">3 / 24</button>
       <div class="mn-hud__actions">
         <button type="button" class="mn-hud__button" aria-label="前のスライド"></button>
         <button type="button" class="mn-hud__button" aria-label="次のスライド"></button>
         <button type="button" class="mn-hud__button" aria-label="全画面表示"></button>
       </div>
     </div>
+
+    <div class="mn-progress"><div class="mn-progress__bar"></div></div>
 
     <!-- ページ切り替えの読み上げ通知 -->
     <p class="mn-live" aria-live="polite" role="status"></p>
@@ -188,7 +201,10 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 - レイアウトの差はクラスではなく `data-layout` 属性で表す。利用者が `@slide class=...` で付けるクラスと衝突させないため
 - `data-index` は 0 始まりのスライド位置。E2E とデバッグが「いま何枚目か」を DOM から判定するための契約なので外さない
 - 操作 UI は必ず `button` 要素で実装し、アイコンのみの場合は `aria-label` を付ける（FR-22）
-- `.mn-hud` は本文の上に重なる。M2 では `pointer-events: none` で選択を妨げないようにしてあるので、M3 でボタンを足すときはボタン側だけ `pointer-events: auto` に戻す
+- `.mn-hud` は本文の上に重なる。`pointer-events: none` で選択を妨げず、ボタン側だけ `auto` に戻す
+- **`.mn-hud` と `.mn-progress` はキャンバスの外に置き、画面基準（`position: fixed`）で配置する。** 拡縮の影響を受けず、いつも同じ場所にある
+- 画面の隅は、比率によって「余白の上」にも「スライドの上」にもなる。**どちらでも読めるよう、文字色を背景の明るさで切り替え、うっすら地を敷く**（[D-21](./decisions.md)）。片方だけの対策では、もう片方で埋もれる
+- `.mn-hud__counter` はページ番号であると同時に入口へ戻る入口でもある。**1 クリックでは戻らない。** ポインタを乗せ続けるかダブルクリックすると `data-armed="true"` になり、そこで押すと戻る（[D-22](./decisions.md)）。発表中の誤クリックで話が止まらないようにするため
 
 ## 5. スタイル設計
 
@@ -199,6 +215,7 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 ```css
 :root {
   /* 色 */
+  --mn-page-bg: #ffffff; /* キャンバスの外側（レターボックス） */
   --mn-bg: #ffffff;
   --mn-fg: #14181d;
   --mn-muted: #5b6570;
@@ -226,18 +243,24 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 - クラス名は役割を表す。見た目を表す名前（`.red`、`.big`）を作らない
 - ダークテーマは v1.1。ただし変数構成は最初からテーマ差し替えだけで済む形にする
 
-### 5.2 16:9 フィット
+### 5.2 表示領域へのフィット
 
-基準キャンバスは 1600x900 px 固定。表示領域に合わせて `transform: scale()` で拡縮する。
+基準キャンバスは 1600x900（16:9）。**16:9 を崩さずに、縦か横のどちらかを画面いっぱいにする**（[D-11](./decisions.md)）。
 
 ```ts
-const scale = Math.min(viewportWidth / canvasWidth, viewportHeight / canvasHeight);
+// 小さいほうの比率を採る。はみ出さずに、片方はぴったり埋まる
+const scale = Math.min(containerWidth / canvasWidth, containerHeight / canvasHeight);
 ```
+
+- 普通の横長画面 → 高さいっぱい、左右に余白
+- 縦長すぎる画面 → 幅いっぱい、上下に余白
+
+余白は白（`--mn-page-bg`）なので、スライドとの境目はほとんど見えない。
 
 - `.mn-stage` は固定 px サイズを持ち、`transform: scale(var(--mn-scale))` と `transform-origin: center` で中央へ配置する
 - 再計算は `ResizeObserver` で行う。全画面への遷移でも発火する
 - 再計算は次フレームへまとめ、連続リサイズで描画が詰まらないようにする
-- 基準キャンバスを固定にすることで、文字サイズと余白を px で決め打ちでき、どの画面でも見た目が一致する（発表時の再現性を優先）
+- 基準を固定することで、テーマの px 値をそのまま使え、**どの画面でも 1 枚に入る情報量が変わらない**
 
 ## 6. ナビゲーション
 

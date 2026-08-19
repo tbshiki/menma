@@ -106,6 +106,74 @@ test("原稿が URL へ載らない（D-19）", async ({ page }) => {
   await expect(page).toHaveURL(/#\/1$/);
 });
 
+test("Front Matter で余白とバーの色を変えられる（FR-36）", async ({ page }) => {
+  await pasteAndOpen(
+    page,
+    [
+      "---",
+      "pageBackground: rgb(18, 52, 86)",
+      "progressColor: rgb(171, 205, 239)",
+      "---",
+      "# 色",
+    ].join("\n"),
+  );
+
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(18, 52, 86)");
+  await expect(page.locator(".mn-progress__bar")).toHaveCSS(
+    "background-color",
+    "rgb(171, 205, 239)",
+  );
+});
+
+test("色を指定しなければテーマの値を使う", async ({ page }) => {
+  await pasteAndOpen(page, "# 指定なし");
+
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+});
+
+test("入口画面で選んだ色が原稿の指定より優先される（FR-37）", async ({ page }) => {
+  // 入口で色を変えてから、別の色を書いた原稿を開く
+  await page.getByLabel("スライドの外側").fill("#102030");
+  await pasteAndOpen(page, ["---", "pageBackground: #ffeeee", "---", "# 優先順位"].join("\n"));
+
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(16, 32, 48)");
+});
+
+test("原稿の指定に戻すと UI の色を使わなくなる", async ({ page }) => {
+  await page.getByLabel("スライドの外側").fill("#102030");
+  await page.getByRole("button", { name: "原稿の指定に戻す" }).click();
+
+  await pasteAndOpen(
+    page,
+    ["---", "pageBackground: rgb(255, 238, 238)", "---", "# 戻した"].join("\n"),
+  );
+
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(255, 238, 238)");
+});
+
+test("入口画面で選んだ色は次に開いたときも残る", async ({ page }) => {
+  await page.getByLabel("進み具合のバー").fill("#f97316");
+  await page.reload();
+
+  await expect(page.getByLabel("進み具合のバー")).toHaveValue("#f97316");
+
+  await pasteAndOpen(page, "# 保存の確認");
+  await expect(page.locator(".mn-progress__bar")).toHaveCSS(
+    "background-color",
+    "rgb(249, 115, 22)",
+  );
+});
+
+test("外側が暗いときは操作 UI を明るい文字にする（D-21）", async ({ page }) => {
+  await pasteAndOpen(
+    page,
+    ["---", "pageBackground: rgb(16, 20, 24)", "---", "# 暗い余白"].join("\n"),
+  );
+
+  // 濃い余白の上でページ番号が埋もれないこと
+  await expect(page.locator(".mn-hud")).toHaveCSS("color", "rgb(244, 246, 248)");
+});
+
 test("保存した原稿を消すと次回は入口から始まる", async ({ page }) => {
   await pasteAndOpen(page, "# 消される原稿");
   await expect(page.locator(visibleSlide)).toHaveCount(1);
