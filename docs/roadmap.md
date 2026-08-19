@@ -25,13 +25,13 @@
 | ID | 名前 | 目的 | 主な要件 | 状態 |
 | --- | --- | --- | --- | --- |
 | M0 | プロジェクト基盤 | ビルドと検証の土台を作る | NFR-01, NFR-09 | 完了 |
-| M1 | パーサ | Markdown を Deck モデルへ変換する | FR-01〜FR-07 | **次はここ** |
-| M2 | 発表コア | 実際の LT で最低限使える状態にする | FR-13〜FR-16, FR-18 | 未着手 |
+| M1 | パーサ | Markdown を Deck モデルへ変換する | FR-01〜FR-07 | 完了 |
+| M2 | 発表コア | 実際の LT で最低限使える状態にする | FR-13〜FR-16, FR-18 | **次はここ** |
 | M3 | 表示品質 | 会場のプロジェクタで安定して見せられる | FR-08〜FR-11, FR-17 | 未着手 |
 | M4 | 堅牢性と検証 | 壊れ方を設計し、CI で守る | FR-19〜FR-23, NFR-09 | 未着手 |
 | M5 | リリース準備 | 他人が使い始められる状態にする | 受け入れ条件全項目 | 未着手 |
 
-現時点で動くこと: `slides.md` を読み込んで画面へ表示する（解析もスライド表示もまだ）。検証コマンド一式と CI 相当のローカル検証は揃っている。
+現時点で動くこと: `slides.md` を読み込み、Front Matter・スライド分割・ディレクティブ・Markdown を解釈して `Deck` を組み立てられる。画面へはパース結果の要約を出すだけで、スライドとしての描画と操作はこれから（M2）。
 
 M2 と M3 の間に**実際の発表で 1 回使う**ゲートを置く（6 章）。
 
@@ -61,13 +61,13 @@ M2 と M3 の間に**実際の発表で 1 回使う**ゲートを置く（6 章�
 
 タスク
 
-- [ ] `deck/types.ts` に `Deck` / `Slide` / `DeckMeta` / `DeckWarning` を定義する
-- [ ] `parseFrontMatter.ts`（FR-02、[記法仕様 3 章](./spec-markdown.md#3-front-matter)）
-- [ ] `splitSlides.ts`（FR-03、コードフェンス内の `---` を分割しない）
-- [ ] `parseDirectives.ts`（FR-05〜FR-07、`@slide` / `@aside` / `@notes`）
-- [ ] `markdown.ts`（markdown-it の設定、外部リンクの `target` / `rel`）
-- [ ] `parseDeck.ts` で束ね、警告を `Deck.warnings` へ集約する
-- [ ] 単体テスト: 正常系に加え、閉じない Front Matter、型不一致、未知キー、未知 layout、フェンス内 `---`、`@aside` の重複、エスケープ
+- [x] `deck/types.ts` に `Deck` / `Slide` / `DeckMeta` / `DeckWarning` を定義する
+- [x] `parseFrontMatter.ts`（FR-02、[記法仕様 3 章](./spec-markdown.md#3-front-matter)）
+- [x] `splitSlides.ts`（FR-03、コードフェンス内の `---` を分割しない）
+- [x] `parseDirectives.ts`（FR-05〜FR-07、`@slide` / `@aside` / `@notes`）
+- [x] `markdown.ts`（markdown-it の設定、外部リンクの `target` / `rel`）
+- [x] `parseDeck.ts` で束ね、警告を `Deck.warnings` へ集約する
+- [x] 単体テスト: 正常系に加え、閉じない Front Matter、型不一致、未知キー、未知 layout、フェンス内 `---`、`@aside` の重複、エスケープ
 
 完了条件
 

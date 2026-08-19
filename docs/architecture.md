@@ -106,10 +106,12 @@ src/
 │
 ├── deck/                      # 純粋層。DOM を import しない
 │   ├── types.ts
+│   ├── errors.ts              # DeckError（回復不能なエラーだけを投げる）
 │   ├── parseDeck.ts           # 下の 4 つを束ねる
 │   ├── parseFrontMatter.ts
 │   ├── splitSlides.ts
 │   ├── parseDirectives.ts
+│   ├── fence.ts               # コードフェンスの追跡（分割とディレクティブ検出で共有）
 │   └── markdown.ts            # markdown-it の設定とレンダリング
 │
 ├── view/                      # DOM 層
@@ -274,6 +276,7 @@ const md = new MarkdownIt({
 ```
 
 - 外部リンクへの `target` / `rel` 付与は `renderer.rules.link_open` の上書きで行う（FR-20）
+- 型は markdown-it 同梱のもの（`RendererRule` など）を使う。`@types/markdown-it` は入れない — markdown-it 15 では同梱型が正で、`@types` を併用すると型名が食い違う
 - シンタックスハイライトは MVP では行わない。v1.1 で別モジュールとして遅延読み込みで追加する（[D-06](./decisions.md)）
 
 ## 9. エラー処理とログ

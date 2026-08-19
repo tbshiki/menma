@@ -29,5 +29,8 @@
     "typescript-eslint": "^8.67.0",
     "vite": "^8.2.1",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "markdown-it": "^15.0.0"
   }
 }
