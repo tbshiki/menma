@@ -16,7 +16,7 @@ description: プロジェクト固有の QA 方法が未確定なリポジトリ
 
 > このリポジトリはまだ実装前で、`package.json` が存在しない。上の表には**実在するコマンドだけ**を載せている。
 >
-> `markdown-web-slides-project-spec.md` は pnpm 前提で `pnpm dev` / `pnpm build` / `pnpm preview` / `pnpm test` / `pnpm test:e2e` を想定している。ただしこれは**計画であって定義済みではない**ため、`package.json` に実際のスクリプトを追加した時点で上の表へ移すこと。それまで推測で実行しない。
+> `docs/roadmap.md` の M0 は pnpm 前提で `pnpm dev` / `pnpm build` / `pnpm preview` / `pnpm typecheck` / `pnpm lint` / `pnpm format:check` / `pnpm test` / `pnpm test:e2e` を定義する計画になっている。ただしこれは**計画であって定義済みではない**ため、`package.json` に実際のスクリプトを追加した時点で上の表へ移すこと。それまで推測で実行しない。
 
 **調査の結果、恒常的に使える検証手段が判明したらこの表へ追記する。** 次回以降のゼロからの再調査を避けるため。追記するのは、リポジトリに定義済みで再現性のあるコマンドだけとする。その場限りの一時コマンドは載せない。
 

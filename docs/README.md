@@ -1,0 +1,21 @@
+# menma ドキュメント
+
+実装の正典はこの 5 つ。目的が違うので、更新するときも参照するときも使い分ける。
+
+| 文書 | 何が書いてあるか | いつ読むか |
+| --- | --- | --- |
+| [requirements.md](./requirements.md) | 目的、スコープ、機能要件（FR-xx）、非機能要件（NFR-xx）、MVP 受け入れ条件 | 何を作るか確認するとき。実装の是非を判断するとき |
+| [spec-markdown.md](./spec-markdown.md) | 原稿の書き方（Front Matter、スライド分割、`@slide` / `@aside` / `@notes`） | 記法に関わる実装をするとき。README を書くとき |
+| [architecture.md](./architecture.md) | 内部モデル、モジュール構成、DOM とクラス名、CSS トークン、ナビゲーション、テスト戦略 | コードを書く直前 |
+| [roadmap.md](./roadmap.md) | マイルストーン M0〜M5、タスク、完了条件 | 次に何をやるか決めるとき |
+| [decisions.md](./decisions.md) | 確定した設計判断とその理由、未決事項、発表後の評価ログ | 「なぜこうなっているか」を知りたいとき。方針を変えたいとき |
+
+## 更新のルール
+
+- **仕様を変えるときは、コードより先にこの `docs/` を更新する。** docs とコードが食い違ったまま進めない
+- 判断を変えたときは `decisions.md` へ理由ごと追記する。決定の履歴を消さない
+- 未決事項（`decisions.md` の Q-xx）は AI が勝手に確定しない。ユーザーへ確認する
+
+## 参考
+
+- [archive/2026-08-19-initial-concept.md](./archive/2026-08-19-initial-concept.md) — 構想段階のメモ。**正典ではない**（経緯の確認用）

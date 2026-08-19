@@ -6,13 +6,23 @@ Markdown を書いてブラウザでそのまま発表できる、軽量な Web 
 - Web サイトとしてそのまま公開でき、キーボードだけで発表できる
 - 依存関係を少なく保ち、HTML / CSS の知識があればデザインを拡張できる
 
-要件定義・基本設計・実装計画は [`markdown-web-slides-project-spec.md`](markdown-web-slides-project-spec.md) が正典です。実装方針で迷ったら、まずこの仕様書を参照してください。
-
 想定スタックは Vite + TypeScript + markdown-it + CSS + Playwright（パッケージマネージャーは pnpm）です。
+
+## ドキュメント
+
+実装の正典は [`docs/`](docs/) にあります。実装方針で迷ったら、まずここを参照してください。
+
+| 文書 | 内容 |
+| --- | --- |
+| [docs/requirements.md](docs/requirements.md) | 目的・スコープ・機能要件（FR-xx）・非機能要件（NFR-xx）・MVP 受け入れ条件 |
+| [docs/spec-markdown.md](docs/spec-markdown.md) | 原稿の記法（Front Matter、スライド分割、`@slide` / `@aside` / `@notes`） |
+| [docs/architecture.md](docs/architecture.md) | 内部モデル、モジュール構成、DOM とクラス名、テスト戦略 |
+| [docs/roadmap.md](docs/roadmap.md) | マイルストーン M0〜M5 と完了条件 |
+| [docs/decisions.md](docs/decisions.md) | 確定した設計判断と理由、未決事項 |
 
 ## 現在の状態
 
-**実装前です。** 現時点でこのリポジトリにあるのは、仕様書と AI 開発基盤だけです。`package.json` はまだありません。
+**実装前（M0 着手前）です。** 現時点でこのリポジトリにあるのは、ドキュメントと AI 開発基盤だけです。`package.json` はまだありません。次の作業は [ロードマップ M0](docs/roadmap.md#2-m0--プロジェクト基盤) です。
 
 ## AI 開発基盤
 
