@@ -1,0 +1,16 @@
+{
+  // Cloudflare Workers（静的アセットのみ）の設定。
+  // GitHub 連携のビルドでも手元からの `pnpm deploy` でも、このファイルが正典になる。
+  // ダッシュボード側で出力先を設定し直す必要はない。
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "menma",
+  "compatibility_date": "2026-08-19",
+
+  // ビルド成果物をそのまま配信する。Worker スクリプト（main）は持たない
+  "assets": {
+    "directory": "./dist",
+  },
+
+  // 非本番ブランチのプレビュー URL を有効にする（Pull Request へコメントされる）
+  "preview_urls": true,
+}

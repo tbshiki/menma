@@ -38,7 +38,7 @@ pnpm dev
 | `pnpm format` / `pnpm format:check` | Prettier（対象はコードのみ。`*.md` と `.claude/` は除外） |
 | `pnpm test` / `pnpm test:watch` | 単体テスト（Vitest） |
 | `pnpm test:e2e` | E2E（Playwright / Chromium）。初回は `pnpm exec playwright install chromium` が要る |
-| `pnpm deploy` | ビルドして Cloudflare Pages へ手動デプロイ（5.2） |
+| `pnpm deploy` | ビルドして Cloudflare Workers へ手動デプロイ（5.2） |
 
 サブディレクトリ配信を試すときはベースパスを環境変数で渡す。
 
@@ -53,35 +53,42 @@ $env:MENMA_BASE = "/slides/"; pnpm build
 3. 影響範囲に応じて `pnpm typecheck` → `pnpm test` → `pnpm lint` → `pnpm build` の順に検証する
 4. AI 設定（`AGENTS.md`、`.claude/`、`skills/`、`scripts/`）を触ったら `scripts/check-ai-config.ps1` を実行する
 
-## 5. デプロイ（Cloudflare Pages）
+## 5. デプロイ（Cloudflare Workers）
 
-配信先は Cloudflare Pages（[D-17](./decisions.md)）。成果物は `dist/` の静的ファイルだけで、サーバ処理は要らない。
+配信先は Cloudflare Workers の静的アセット（[D-17](./decisions.md)）。成果物は `dist/` の静的ファイルだけで、Worker スクリプトもサーバ処理も持たない。
 
-ビルドの設定は `wrangler.toml` が正典。GitHub 連携でも手動デプロイでも同じ設定を使う。
+設定は `wrangler.jsonc` が正典。GitHub 連携のビルドでも手元からの手動デプロイでも同じ設定を使うので、ダッシュボードで出力先を設定し直す必要はない。
 
-```toml
-name = "menma"
-pages_build_output_dir = "dist"
+```jsonc
+{
+  "name": "menma",
+  "assets": { "directory": "./dist" },
+  "preview_urls": true,
+}
 ```
+
+公開 URL は `menma.<アカウントのサブドメイン>.workers.dev`。
 
 ### 5.1 GitHub 連携（通常の運用）
 
 `main` への push で自動デプロイされる。初回だけ Cloudflare ダッシュボードでの接続が必要。
 
-1. Cloudflare ダッシュボード → Workers & Pages → Create → Pages → Connect to Git
+1. Cloudflare ダッシュボード → Workers & Pages → Create → **Import a repository**（Connect to Git）
 2. リポジトリ `tbshiki/menma` を選び、本番ブランチに `main` を指定
 3. ビルド設定
-   - フレームワークプリセット: なし（None）
    - ビルドコマンド: `pnpm build`
-   - ビルド出力ディレクトリ: `dist`（`wrangler.toml` にもあるので変更不要）
+   - デプロイコマンド: `npx wrangler deploy`（既定のまま）
    - Node のバージョン: `.node-version`（22）が読まれる
-4. 保存してデプロイ
+4. Settings → Build → **非本番ブランチのビルドを有効化**する（Pull Request のプレビュー URL に必要）
+5. 保存してデプロイ
 
-Pull Request ごとにプレビュー URL が発行される。発表前の確認はプレビュー URL で行い、本番 URL は `main` の内容に保つ。
+非本番ブランチのビルドでは、デプロイコマンドが `npx wrangler versions upload` に置き換わり、本番を差し替えずにプレビュー版だけが作られる。プレビュー URL は Pull Request へコメントされ、同じブランチへ commit を足しても URL は変わらない。
+
+**発表前の確認はプレビュー URL で行い、本番 URL は `main` の内容に保つ。**
 
 ### 5.2 wrangler から手動デプロイ
 
-ダッシュボードを待たずに今の内容を上げたいときに使う。**初回はブラウザ認証が必要。**
+ダッシュボードのビルドを待たずに今の内容を上げたいときに使う。**初回はブラウザ認証が必要。**
 
 ```powershell
 # 1. Cloudflare へログイン（ブラウザが開く。実行するのは人間）
@@ -91,15 +98,15 @@ npx wrangler login
 pnpm deploy
 ```
 
-`pnpm deploy` は `pnpm build` を挟むので、ビルド漏れの状態を上げてしまうことがない。
+`pnpm deploy` は `pnpm build` を挟むので、ビルド漏れの状態を上げてしまうことがない。設定だけ確かめたいときは `npx wrangler deploy --dry-run`（アップロードしない）。
 
-GitHub 連携と手動デプロイは同じプロジェクトへ向く。手動で上げた内容は次回の push で上書きされるため、**確定させたい変更は必ず main へ入れる。**
+GitHub 連携と手動デプロイは同じ Worker へ向く。手動で上げた内容は次の push で上書きされるため、**確定させたい変更は必ず main へ入れる。**
 
 ### 5.3 デプロイ前に確認すること
 
 - `pnpm build` と `pnpm test:e2e` が通っている
 - `dist/` をローカルで `pnpm preview` して表示を確認した
-- 原稿に公開したくない内容が含まれていない（`*.pages.dev` は誰でも開ける）
+- 原稿に公開したくない内容が含まれていない（`*.workers.dev` は誰でも開ける）
 
 ## 6. 生成物
 

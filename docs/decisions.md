@@ -127,11 +127,15 @@ M3 時点の実測は JS が gzip 54KB（内訳の大半が markdown-it とそ�
 
 理由: markdown-it は記法の中核で、外すと仕様（表・リンク・エスケープの挙動）が変わる。目標値は要件ではなく開発目標として定義してある。削減は効果と副作用を見てから v1.1 で扱う。候補は preset の絞り込み、パーサの遅延読み込み、より小さいパーサへの置き換え。**削減のために記法の互換性を崩さない**ことを前提とする。
 
-### D-17 配信先は Cloudflare Pages。GitHub 連携を基本とし、wrangler でも打てるようにする
+### D-17 配信先は Cloudflare Workers の静的アセット。GitHub 連携を基本とし、wrangler でも打てるようにする
 
-`main` への push で自動デプロイし、Pull Request にはプレビュー URL が付く運用を基本にする。あわせて `pnpm deploy`（`wrangler pages deploy`）でも同じプロジェクトへ手動デプロイできる状態を保つ。設定は `wrangler.toml` に集約し、ダッシュボードとファイルで二重管理しない。
+`main` への push で自動デプロイし、Pull Request にはプレビュー URL が付く運用を基本にする。あわせて `pnpm deploy`（`wrangler deploy`）でも同じ Worker へ手動デプロイできる状態を保つ。設定は `wrangler.jsonc` に集約し、ダッシュボードとファイルで二重管理しない。
 
 理由: 成果物が静的ファイルだけなので、どの静的ホスティングでも動く（NFR-03）。その中で GitHub 連携が最も手数が少なく、プレビュー URL が発表前の確認に使える。手動デプロイを残すのは、ダッシュボードのビルドを待たずに会場で直したいときの逃げ道として。
+
+**Pages ではなく Workers を選ぶ。** 当初は Pages で設定したが、デプロイ前に見直して Workers へ変更した。Cloudflare は Pages から Workers への移行を公式に案内しており（[Migrate from Pages](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/)）、機能は Workers のほうが広い。静的アセットのリクエストは Pages と同じく無料で、プレビュー URL と Pull Request コメントも同等に使えるため、menma のような静的サイトが Workers を選んで失うものはない。**まだ一度もデプロイしていない段階だったので、移行コストが実質ゼロのうちに寄せた。**
+
+Worker スクリプト（`main`）は持たず、アセットだけを配信する構成にする。動的な処理が必要になったらその時点で `main` を足せる。
 
 **手動デプロイした内容は次の push で上書きされる。** 確定させたい変更は必ず `main` へ入れる。
 
@@ -142,7 +146,7 @@ M3 時点の実測は JS が gzip 54KB（内訳の大半が markdown-it とそ�
 | ID | 項目 | 現時点の推奨 | 影響 |
 | --- | --- | --- | --- |
 | Q-01 | ライセンス | MIT | `LICENSE` と README。公開時に必須 |
-| ~~Q-02~~ | ~~公開デプロイ先~~ | **確定: Cloudflare Pages（[D-17](#d-17-配信先は-cloudflare-pagesgithub-連携を基本とし-wrangler-でも打てるようにする)）** | 決着済み |
+| ~~Q-02~~ | ~~公開デプロイ先~~ | **確定: Cloudflare Workers の静的アセット（D-17）** | 決着済み |
 | Q-03 | npm パッケージとして公開するか | MVP では公開しない | 公開する場合はパッケージ名の確保と CLI 設計（v2 相当） |
 | Q-04 | リポジトリの公開範囲 | 未確認 | 公開する場合はサンプル原稿の内容とアセットの権利確認が必要 |
 
