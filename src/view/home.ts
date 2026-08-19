@@ -4,6 +4,7 @@ import {
   type DeckAsset,
   type DeckSource,
 } from "../deck/source";
+import type { Appearance } from "../storage/appearance";
 import { describeRejected, selectFiles } from "./fileSelection";
 
 /**
@@ -23,6 +24,10 @@ export type HomeOptions = {
   onResume?: (() => void) | undefined;
   /** 保存された原稿があるときだけ渡す。「保存を消す」を出すため */
   onClearStored?: (() => void) | undefined;
+  /** いま保存されている見た目の指定 */
+  appearance: Appearance;
+  /** 色を変えたときに呼ばれる。未指定へ戻す場合は undefined を渡す */
+  onAppearanceChange: (appearance: Appearance) => void;
 };
 
 export type HomeView = {
@@ -150,6 +155,7 @@ export function createHome(options: HomeOptions): HomeView {
       clearMessages();
       options.onSource({ kind: "sample" });
     }, options.onClearStored),
+    createAppearanceSection(options),
     note,
   );
 
@@ -303,4 +309,77 @@ function createSection(heading: string, description: string): HTMLElement {
 
   section.append(title, text);
   return section;
+}
+
+/**
+ * 色の設定（FR-37）。
+ *
+ * ここで選んだ色はこのブラウザに保存され、**原稿の指定より優先される**（D-21）。
+ * 「原稿の指定に戻す」を押すと保存を消し、原稿かテーマの色に戻る。
+ */
+function createAppearanceSection(options: HomeOptions): HTMLElement {
+  const section = createSection(
+    "色",
+    "この端末で見るときの色。原稿に書かれた指定より優先されます。",
+  );
+
+  const current: Appearance = { ...options.appearance };
+
+  const update = (next: Appearance): void => {
+    current.pageBackground = next.pageBackground;
+    current.progressColor = next.progressColor;
+    options.onAppearanceChange({ ...current });
+  };
+
+  const background = createColorField(
+    "スライドの外側",
+    options.appearance.pageBackground ?? "#ffffff",
+    (value) => {
+      update({ ...current, pageBackground: value });
+    },
+  );
+
+  const progress = createColorField(
+    "進み具合のバー",
+    options.appearance.progressColor ?? "#1d5fa8",
+    (value) => {
+      update({ ...current, progressColor: value });
+    },
+  );
+
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.className = "mn-home__link";
+  reset.textContent = "原稿の指定に戻す";
+  reset.addEventListener("click", () => {
+    background.input.value = "#ffffff";
+    progress.input.value = "#1d5fa8";
+    update({});
+  });
+
+  section.append(background.root, progress.root, reset);
+  return section;
+}
+
+function createColorField(
+  label: string,
+  value: string,
+  onChange: (value: string) => void,
+): { root: HTMLElement; input: HTMLInputElement } {
+  const root = document.createElement("label");
+  root.className = "mn-home__color";
+
+  const text = document.createElement("span");
+  text.textContent = label;
+
+  const input = document.createElement("input");
+  input.type = "color";
+  input.className = "mn-home__color-input";
+  input.value = value;
+  input.addEventListener("change", () => {
+    onChange(input.value);
+  });
+
+  root.append(text, input);
+  return { root, input };
 }

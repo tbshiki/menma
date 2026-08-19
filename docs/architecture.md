@@ -57,8 +57,12 @@ export type DeckMeta = {
   aspectRatio: string;
   showPageNumber: boolean;
   showControls: boolean;
+  showProgress: boolean;
   transition: "none";
   externalLinksNewTab: boolean;
+  /** 空ならテーマの値を使う。UI の指定があればそちらが優先される（D-21） */
+  pageBackground: string;
+  progressColor: string;
 };
 
 export type Slide = {
@@ -123,6 +127,8 @@ src/
 │   ├── renderDeck.ts          # Deck → DOM
 │   ├── renderSlide.ts
 │   ├── cssValue.ts            # 原稿由来の値を CSS へ渡す前の検査
+│   ├── colors.ts              # 色の決め方と明暗の判定（D-21）
+│   ├── progress.ts            # 進み具合のバー
 │   ├── hud.ts                 # ページ番号・操作 UI
 │   ├── errorScreen.ts
 │   └── scaler.ts              # 16:9 フィット
@@ -132,6 +138,10 @@ src/
 │   ├── keyboard.ts
 │   ├── hash.ts
 │   └── fullscreen.ts
+│
+├── storage/                   # ブラウザへの保存。原稿は IndexedDB、設定は localStorage
+│   ├── deckStore.ts           # 原稿と画像（15.3）
+│   └── appearance.ts          # 見た目の指定（D-21）
 │
 ├── styles/
 │   ├── reset.css
@@ -167,19 +177,18 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
         <div class="mn-slide__aside">...</div>
       </section>
       <!-- 表示していないスライドは hidden 属性を持つ -->
+    </div>
 
-      <!-- 操作 UI はキャンバスの中。ページ番号が左下、ボタンが右下 -->
-      <div class="mn-hud">
-        <p class="mn-hud__counter">3 / 24</p>
-        <div class="mn-hud__actions">
-          <button type="button" class="mn-hud__button" aria-label="前のスライド"></button>
-          <button type="button" class="mn-hud__button" aria-label="次のスライド"></button>
-          <button type="button" class="mn-hud__button" aria-label="全画面表示"></button>
-        </div>
+    <!-- 操作 UI と進み具合のバーは画面基準（キャンバスの外）。ページ番号が左下、ボタンが右下 -->
+    <div class="mn-hud">
+      <p class="mn-hud__counter">3 / 24</p>
+      <div class="mn-hud__actions">
+        <button type="button" class="mn-hud__button" aria-label="前のスライド"></button>
+        <button type="button" class="mn-hud__button" aria-label="次のスライド"></button>
+        <button type="button" class="mn-hud__button" aria-label="全画面表示"></button>
       </div>
     </div>
 
-    <!-- 進み具合のバーは画面の最下部（キャンバスの外） -->
     <div class="mn-progress"><div class="mn-progress__bar"></div></div>
 
     <!-- ページ切り替えの読み上げ通知 -->
@@ -193,8 +202,8 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 - `data-index` は 0 始まりのスライド位置。E2E とデバッグが「いま何枚目か」を DOM から判定するための契約なので外さない
 - 操作 UI は必ず `button` 要素で実装し、アイコンのみの場合は `aria-label` を付ける（FR-22）
 - `.mn-hud` は本文の上に重なる。`pointer-events: none` で選択を妨げず、ボタン側だけ `auto` に戻す
-- **`.mn-hud` はキャンバス（`.mn-stage`）の中に置く。** 外側の余白へ出すと、`pageBackground` を濃くしたときに文字が埋もれる。中に置けば常にスライドの地色の上に乗る。位置と大きさは基準キャンバスの座標なので、スライドと一緒に拡縮される
-- `.mn-progress` はキャンバスの外（画面の最下部）。デッキ全体の進み具合を示すもので、スライドの一部ではない
+- **`.mn-hud` と `.mn-progress` はキャンバスの外に置き、画面基準（`position: fixed`）で配置する。** 拡縮の影響を受けず、いつも同じ場所にある
+- 画面の隅は、比率によって「余白の上」にも「スライドの上」にもなる。**どちらでも読めるよう、文字色を背景の明るさで切り替え、うっすら地を敷く**（[D-21](./decisions.md)）。片方だけの対策では、もう片方で埋もれる
 
 ## 5. スタイル設計
 

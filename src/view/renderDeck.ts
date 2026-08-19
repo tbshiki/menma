@@ -1,5 +1,7 @@
+import type { Appearance } from "../storage/appearance";
 import type { Deck } from "../deck/types";
 import type { AssetBindings } from "./assets";
+import { computeColor, isDarkBackground, resolveColor } from "./colors";
 import { renderSlide } from "./renderSlide";
 
 /**
@@ -17,15 +19,23 @@ export type DeckView = {
   showSlide(index: number): void;
 };
 
-export function renderDeck(deck: Deck, bindings: AssetBindings): DeckView {
+export function renderDeck(
+  deck: Deck,
+  bindings: AssetBindings,
+  appearance: Appearance = {},
+): DeckView {
   const root = document.createElement("div");
   root.className = "mn-deck";
   root.dataset.theme = deck.meta.theme;
 
-  // 原稿で指定された色をテーマの上に重ねる（FR-36）。
+  // 色は UI の指定 → 原稿の指定 → テーマ の順で決める（FR-36、FR-37、D-21）。
   // CSS Custom Property として渡すので、解釈できない値は無視されるだけで済む（NFR-07）
-  applyColor(root, "--mn-page-bg", deck.meta.pageBackground);
-  applyColor(root, "--mn-progress-color", deck.meta.progressColor);
+  const pageBackground = resolveColor(appearance.pageBackground, deck.meta.pageBackground);
+  const progressColor = resolveColor(appearance.progressColor, deck.meta.progressColor);
+
+  applyColor(root, "--mn-page-bg", pageBackground);
+  applyColor(root, "--mn-progress-color", progressColor);
+  applyHudContrast(root, pageBackground);
 
   const stage = document.createElement("div");
   stage.className = "mn-stage";
@@ -67,8 +77,29 @@ export function renderDeck(deck: Deck, bindings: AssetBindings): DeckView {
 }
 
 /** 指定があるときだけテーマの色を上書きする */
-function applyColor(root: HTMLElement, property: string, value: string): void {
-  if (value !== "") {
+function applyColor(root: HTMLElement, property: string, value: string | undefined): void {
+  if (value !== undefined && value !== "") {
     root.style.setProperty(property, value);
+  }
+}
+
+/**
+ * 操作 UI は画面の隅（スライドの外）に出るため、背景が濃いと文字が埋もれる。
+ * 背景の明るさを見て読める色を決める（D-21）。
+ */
+function applyHudContrast(root: HTMLElement, pageBackground: string | undefined): void {
+  if (pageBackground === undefined) {
+    return;
+  }
+
+  const computed = computeColor(pageBackground, root.ownerDocument);
+
+  if (computed === undefined) {
+    return;
+  }
+
+  if (isDarkBackground(computed)) {
+    root.style.setProperty("--mn-hud-fg", "#f4f6f8");
+    root.style.setProperty("--mn-hud-bg", "rgb(0 0 0 / 0.55)");
   }
 }

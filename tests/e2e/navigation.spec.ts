@@ -297,18 +297,18 @@ test.describe("表示", () => {
     expect(actionsBox.y).toBeGreaterThan(viewport.height / 2);
   });
 
-  test("操作 UI はスライドの中に、手前に重なって出る（FR-18）", async ({ page }) => {
-    // 外側の余白へ出すと pageBackground を濃くしたときに文字が埋もれる
-    await expect(page.locator(".mn-stage > .mn-hud")).toHaveCount(1);
+  test("操作 UI と進み具合のバーは画面基準で置かれる（FR-18、FR-35）", async ({ page }) => {
+    // キャンバスの中に入れるとスライドと一緒に拡縮されて位置が動く
+    await expect(page.locator(".mn-deck > .mn-hud")).toHaveCount(1);
+    await expect(page.locator(".mn-deck > .mn-progress")).toHaveCount(1);
+
+    await expect(page.locator(".mn-hud")).toHaveCSS("position", "fixed");
 
     // cover の背景画像などに埋もれないよう、重なり順も明示している
     const hudZ = await page
       .locator(".mn-hud")
       .evaluate((element) => getComputedStyle(element).zIndex);
     expect(Number(hudZ)).toBeGreaterThan(0);
-
-    // 進み具合のバーはキャンバスの外（画面の最下部）
-    await expect(page.locator(".mn-deck > .mn-progress")).toHaveCount(1);
   });
 
   test("進み具合のバーが位置に応じて伸びる（FR-35）", async ({ page }) => {
