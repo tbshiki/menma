@@ -4,7 +4,7 @@
  */
 
 .mn-deck {
-  position: relative;
+  display: grid;
   overflow: hidden;
   width: 100%;
   height: 100vh;
@@ -13,21 +13,22 @@
   background: var(--mn-page-bg);
   color: var(--mn-fg);
   font-family: var(--mn-font-sans);
+  /* 16:9 に収めた結果できる余白は、キャンバスを中央に置いて左右（または上下）へ均等に配る */
+  place-items: center;
 }
 
 /*
- * 基準キャンバス。**幅がここの正典**で、scaler.ts はこの実寸を読んで倍率を決める（設計 5.2）。
- * 高さは画面の比率で変わるため scaler.ts が --mn-canvas-height へ書き込む。
- * 左上を原点に拡大するので、表示領域をちょうど埋める。
+ * 基準キャンバス。ここが 16:9 の正典で、scaler.ts はこの実寸を読んで倍率を決める（設計 5.2）。
+ * 大きさを変えるときは JS ではなくこの 2 行を変える。
  */
 .mn-stage {
   position: relative;
   width: 1600px;
-  height: var(--mn-canvas-height, 900px);
+  height: 900px;
   flex: none;
   background: var(--mn-bg);
   transform: scale(var(--mn-scale, 1));
-  transform-origin: top left;
+  transform-origin: center center;
 }
 
 .mn-slide {

@@ -229,20 +229,22 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 
 ### 5.2 表示領域へのフィット
 
-基準の幅は 1600px。**幅を表示領域へ合わせ、高さは画面の比率から決める**ので、余白（レターボックス）は出ない（[D-11](./decisions.md)）。
+基準キャンバスは 1600x900（16:9）。**16:9 を崩さずに、縦か横のどちらかを画面いっぱいにする**（[D-11](./decisions.md)）。
 
 ```ts
-const scale = containerWidth / canvasWidth; // 幅にだけ合わせる
-const canvasHeight = containerHeight / scale; // 残りは高さに使う
+// 小さいほうの比率を採る。はみ出さずに、片方はぴったり埋まる
+const scale = Math.min(containerWidth / canvasWidth, containerHeight / canvasHeight);
 ```
 
-- `.mn-stage` は幅 1600px を持ち、`transform: scale(var(--mn-scale))` と `transform-origin: top left` で左上を原点に拡縮する
-- 高さは JS が `--mn-canvas-height` として書き込む。**幅は CSS が正典、高さは画面依存**という分担
+- 普通の横長画面 → 高さいっぱい、左右に余白
+- 縦長すぎる画面 → 幅いっぱい、上下に余白
+
+余白は白（`--mn-page-bg`）なので、スライドとの境目はほとんど見えない。
+
+- `.mn-stage` は固定 px サイズを持ち、`transform: scale(var(--mn-scale))` と `transform-origin: center` で中央へ配置する
 - 再計算は `ResizeObserver` で行う。全画面への遷移でも発火する
 - 再計算は次フレームへまとめ、連続リサイズで描画が詰まらないようにする
-- 幅を基準に固定することで、**画面幅に対する文字の大きさは常に一定**になる。テーマの px 値をそのまま使える
-
-引き換えに、画面の縦横比によって 1 枚に入る縦の量が変わる。原稿を作った画面と投影先の比率が大きく違うときは事前に確認する。
+- 基準を固定することで、テーマの px 値をそのまま使え、**どの画面でも 1 枚に入る情報量が変わらない**
 
 ## 6. ナビゲーション
 

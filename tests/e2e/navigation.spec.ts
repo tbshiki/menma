@@ -227,7 +227,7 @@ test.describe("表示", () => {
     await openSample(page);
   });
 
-  test("最初の描画から表示領域いっぱいに広がっている", async ({ page }) => {
+  test("最初の描画から 16:9 を保って表示領域に収まっている", async ({ page }) => {
     // リサイズを挟まずに確認する。初回の倍率計算が誤っていても、
     // 画面サイズを変えたあとに直ってしまうと気づけないため
     const viewport = page.viewportSize();
@@ -240,13 +240,12 @@ test.describe("表示", () => {
       return;
     }
 
-    // 1px は端数の丸め分。余白（レターボックス）を作らない（FR-09）
-    expect(box.width).toBeGreaterThanOrEqual(viewport.width - 1);
     expect(box.width).toBeLessThanOrEqual(viewport.width + 1);
-    expect(box.height).toBeGreaterThanOrEqual(viewport.height - 1);
+    expect(box.height).toBeLessThanOrEqual(viewport.height + 1);
+    expect(box.width / box.height).toBeCloseTo(16 / 9, 2);
   });
 
-  test("ウィンドウの比率を変えても表示領域いっぱいを保つ", async ({ page }) => {
+  test("ウィンドウの比率を変えても 16:9 のまま、縦か横がいっぱいになる", async ({ page }) => {
     for (const size of [
       { width: 1280, height: 720 },
       { width: 800, height: 1200 },
@@ -263,9 +262,15 @@ test.describe("表示", () => {
           return;
         }
 
-        expect(box.width).toBeGreaterThanOrEqual(size.width - 1);
+        // 1px は端数の丸め分
         expect(box.width).toBeLessThanOrEqual(size.width + 1);
-        expect(box.height).toBeGreaterThanOrEqual(size.height - 1);
+        expect(box.height).toBeLessThanOrEqual(size.height + 1);
+        expect(box.width / box.height).toBeCloseTo(16 / 9, 2);
+
+        // どちらか一方は画面ぴったりに埋まる（FR-09）
+        const fillsWidth = box.width >= size.width - 1;
+        const fillsHeight = box.height >= size.height - 1;
+        expect(fillsWidth || fillsHeight).toBe(true);
       }).toPass({ timeout: 2000 });
     }
   });

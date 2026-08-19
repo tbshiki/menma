@@ -1,8 +1,9 @@
 /**
- * 基準キャンバスを表示領域へ広げる（FR-09、設計 5.2）。
+ * 基準キャンバスを表示領域へ収める（FR-09、設計 5.2）。
  *
- * **幅だけを合わせ、高さは画面の比率から決める。** これで余白（レターボックス）が出ない。
- * 幅 1600px は CSS 側の `.mn-stage` が正典で、ここではその実寸を読んで倍率を決める。
+ * **16:9 を崩さずに、縦か横のどちらかを画面いっぱいにする。**
+ * 幅と高さの比率のうち小さいほうを採れば、はみ出さずに片方がぴったり埋まる。
+ * キャンバスの大きさ（1600x900）は CSS 側の `.mn-stage` が正典で、ここでは実寸を読んで倍率だけ決める。
  */
 
 /**
@@ -15,21 +16,23 @@ export function connectScaler(stage: HTMLElement, container: HTMLElement): () =>
 
   const apply = (): void => {
     const canvasWidth = stage.offsetWidth;
+    const canvasHeight = stage.offsetHeight;
 
     // 非表示などで実寸が取れないときは倍率を変えない
-    if (canvasWidth <= 0) {
+    if (canvasWidth <= 0 || canvasHeight <= 0) {
       return;
     }
 
-    const scale = container.clientWidth / canvasWidth;
+    const scale = Math.min(
+      container.clientWidth / canvasWidth,
+      container.clientHeight / canvasHeight,
+    );
 
     if (!Number.isFinite(scale) || scale <= 0) {
       return;
     }
 
     stage.style.setProperty("--mn-scale", String(scale));
-    // 余った縦を全部キャンバスの高さに使う。拡縮後にちょうど画面を埋める
-    stage.style.setProperty("--mn-canvas-height", `${String(container.clientHeight / scale)}px`);
   };
 
   // リサイズは連続して起きる。1 フレームに 1 回だけ計算する

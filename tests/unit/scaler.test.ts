@@ -83,33 +83,32 @@ function connect(stage: FakeElement, container: FakeElement): () => void {
 }
 
 describe("connectScaler", () => {
-  it("幅の比率だけで倍率を決める（余白を作らない）", () => {
+  it("横長の画面では高さいっぱいにする", () => {
+    const stage = createElement({ width: 1600, height: 900 });
+    const container = createElement({ width: 3200, height: 900 });
+
+    // 幅の比率は 2 だが、それでは縦がはみ出す。小さいほうの 1 を採る
+    connect(stage, container);
+
+    expect(lastValue(stage, "--mn-scale")).toBe(String(1));
+  });
+
+  it("縦長の画面では幅いっぱいにする", () => {
     const stage = createElement({ width: 1600, height: 900 });
     const container = createElement({ width: 800, height: 1200 });
 
     connect(stage, container);
 
-    // 高さに余裕があっても幅へ合わせる。16:9 だった頃は min() で 0.5 未満になっていた
     expect(lastValue(stage, "--mn-scale")).toBe(String(0.5));
   });
 
-  it("画面が横長でも幅いっぱいに広げる", () => {
+  it("16:9 の画面ではちょうど収まる", () => {
     const stage = createElement({ width: 1600, height: 900 });
-    const container = createElement({ width: 3200, height: 900 });
+    const container = createElement({ width: 3200, height: 1800 });
 
     connect(stage, container);
 
     expect(lastValue(stage, "--mn-scale")).toBe(String(2));
-  });
-
-  it("余った縦をキャンバスの高さに使う", () => {
-    const stage = createElement({ width: 1600, height: 900 });
-    const container = createElement({ width: 800, height: 1200 });
-
-    connect(stage, container);
-
-    // 倍率 0.5 なので、拡大後に 1200px となる高さは 2400px
-    expect(lastValue(stage, "--mn-canvas-height")).toBe("2400px");
   });
 
   it("収める先とキャンバスの両方を監視する", () => {
@@ -159,8 +158,7 @@ describe("connectScaler", () => {
     notify?.();
     runFrames();
 
-    // 1 回の計算につき倍率と高さの 2 つを書き込む
-    expect(vi.mocked(stage.style.setProperty).mock.calls.length).toBe(initialCalls + 2);
+    expect(vi.mocked(stage.style.setProperty).mock.calls.length).toBe(initialCalls + 1);
   });
 
   it("解除すると監視をやめる", () => {
