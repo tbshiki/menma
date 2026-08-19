@@ -51,7 +51,10 @@ export function startPresentation(
   const progress = createProgress();
   progress.root.hidden = !deck.meta.showProgress;
 
-  view.root.append(hud.root, progress.root);
+  // 操作 UI はスライドの上に重ねる。余白の色を変えても常にスライドの地色の上に乗るので読める
+  view.stage.append(hud.root);
+  // 進み具合のバーは画面の最下部。スライドの外側に置いて全体の進みを示す
+  view.root.append(progress.root);
   mount.append(view.root);
 
   const cleanups: (() => void)[] = [];

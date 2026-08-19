@@ -22,6 +22,11 @@ export function renderDeck(deck: Deck, bindings: AssetBindings): DeckView {
   root.className = "mn-deck";
   root.dataset.theme = deck.meta.theme;
 
+  // 原稿で指定された色をテーマの上に重ねる（FR-36）。
+  // CSS Custom Property として渡すので、解釈できない値は無視されるだけで済む（NFR-07）
+  applyColor(root, "--mn-page-bg", deck.meta.pageBackground);
+  applyColor(root, "--mn-progress-color", deck.meta.progressColor);
+
   const stage = document.createElement("div");
   stage.className = "mn-stage";
 
@@ -59,4 +64,11 @@ export function renderDeck(deck: Deck, bindings: AssetBindings): DeckView {
       visible = next;
     },
   };
+}
+
+/** 指定があるときだけテーマの色を上書きする */
+function applyColor(root: HTMLElement, property: string, value: string): void {
+  if (value !== "") {
+    root.style.setProperty(property, value);
+  }
 }

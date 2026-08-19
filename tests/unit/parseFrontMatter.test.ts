@@ -68,6 +68,24 @@ describe("parseFrontMatter", () => {
     expect(result.warnings[0]?.line).toBe(2);
   });
 
+  it("色の指定をそのまま受け取る（FR-36）", () => {
+    const result = parseFrontMatter(
+      ["---", "pageBackground: #101418", "progressColor: tomato", "---", "本文"].join("\n"),
+    );
+
+    // 妥当性は CSS 側が判断する。ここでは文字列として渡すだけ
+    expect(result.meta.pageBackground).toBe("#101418");
+    expect(result.meta.progressColor).toBe("tomato");
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("色の指定が無ければ空のまま（テーマの値を使う）", () => {
+    const result = parseFrontMatter(["---", "title: 色なし", "---", "本文"].join("\n"));
+
+    expect(result.meta.pageBackground).toBe("");
+    expect(result.meta.progressColor).toBe("");
+  });
+
   it("未知のキーは無視して警告する", () => {
     const result = parseFrontMatter(["---", "unknownKey: 1", "---", "本文"].join("\n"));
 
@@ -91,6 +109,14 @@ describe("parseFrontMatter", () => {
     const result = parseFrontMatter(["---", "title: C# 入門 # 補足", "---", "本文"].join("\n"));
 
     expect(result.meta.title).toBe("C# 入門");
+  });
+
+  it("# の直後に文字が続くならコメントにしない（色の指定）", () => {
+    const result = parseFrontMatter(
+      ["---", "pageBackground: #101418 # 余白の色", "---", "本文"].join("\n"),
+    );
+
+    expect(result.meta.pageBackground).toBe("#101418");
   });
 
   it("コメント行と空行を無視する", () => {

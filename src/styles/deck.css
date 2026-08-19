@@ -154,15 +154,25 @@
 
 /* ---- 操作 UI ------------------------------------------------------------ */
 
+/*
+ * ページ番号は左下、操作ボタンは右下（FR-18）。
+ *
+ * スライド（.mn-stage）の中に置く。外側の余白へ出すと、pageBackground を濃くしたときに
+ * 文字が埋もれてしまう。中に置けば常にスライドの地色の上に乗る。
+ * 位置と大きさは基準キャンバス（1600x900）の座標なので、スライドと一緒に拡縮される。
+ */
 .mn-hud {
-  position: fixed;
-  right: 1.5vmin;
-  bottom: 1.5vmin;
+  position: absolute;
+  z-index: 2;
+  right: 32px;
+  bottom: 24px;
+  left: 32px;
   display: flex;
   align-items: center;
-  color: var(--mn-fg);
+  justify-content: space-between;
+  color: var(--mn-slide-fg, var(--mn-fg));
   font-family: var(--mn-font-sans);
-  font-size: 14px;
+  font-size: 22px;
   font-variant-numeric: tabular-nums;
   gap: 12px;
   /* 発表の邪魔をしない。触れたときだけはっきり見せる */
@@ -183,6 +193,8 @@
 
 .mn-hud__counter {
   margin: 0;
+  /* 左端に置く。非表示でも右側のボタンは右端のままにする */
+  margin-inline-end: auto;
 }
 
 .mn-hud__counter[hidden] {
@@ -191,6 +203,7 @@
 
 .mn-hud__actions {
   display: flex;
+  margin-inline-start: auto;
   gap: 4px;
 }
 
@@ -199,15 +212,15 @@
 }
 
 .mn-hud__button {
-  width: 2em;
-  height: 2em;
+  width: 1.8em;
+  height: 1.8em;
   padding: 0;
   border: 1px solid var(--mn-rule);
   border-radius: var(--mn-radius);
-  background: var(--mn-bg);
+  background: var(--mn-slide-bg, var(--mn-bg));
   color: inherit;
   cursor: pointer;
-  font-size: 1.1em;
+  font-size: 1em;
   line-height: 1;
   pointer-events: auto;
 }
@@ -249,7 +262,8 @@
 .mn-progress__bar {
   width: 100%;
   height: 100%;
-  background: var(--mn-accent);
+  /* 原稿から progressColor が指定されていればそれを使う（FR-36） */
+  background: var(--mn-progress-color, var(--mn-accent));
   transform: scaleX(var(--mn-progress, 0));
   transform-origin: left center;
   transition: transform 0.2s ease-out;

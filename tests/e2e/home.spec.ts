@@ -106,6 +106,31 @@ test("原稿が URL へ載らない（D-19）", async ({ page }) => {
   await expect(page).toHaveURL(/#\/1$/);
 });
 
+test("Front Matter で余白とバーの色を変えられる（FR-36）", async ({ page }) => {
+  await pasteAndOpen(
+    page,
+    [
+      "---",
+      "pageBackground: rgb(18, 52, 86)",
+      "progressColor: rgb(171, 205, 239)",
+      "---",
+      "# 色",
+    ].join("\n"),
+  );
+
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(18, 52, 86)");
+  await expect(page.locator(".mn-progress__bar")).toHaveCSS(
+    "background-color",
+    "rgb(171, 205, 239)",
+  );
+});
+
+test("色を指定しなければテーマの値を使う", async ({ page }) => {
+  await pasteAndOpen(page, "# 指定なし");
+
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+});
+
 test("保存した原稿を消すと次回は入口から始まる", async ({ page }) => {
   await pasteAndOpen(page, "# 消される原稿");
   await expect(page.locator(visibleSlide)).toHaveCount(1);

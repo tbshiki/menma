@@ -275,6 +275,42 @@ test.describe("表示", () => {
     }
   });
 
+  test("ページ番号は左下、操作ボタンは右下に出る（FR-18）", async ({ page }) => {
+    const viewport = page.viewportSize();
+    const counterBox = await page.locator(".mn-hud__counter").boundingBox();
+    const actionsBox = await page.locator(".mn-hud__actions").boundingBox();
+
+    expect(viewport).not.toBeNull();
+    expect(counterBox).not.toBeNull();
+    expect(actionsBox).not.toBeNull();
+
+    if (!viewport || !counterBox || !actionsBox) {
+      return;
+    }
+
+    // 左半分と右半分に分かれている
+    expect(counterBox.x).toBeLessThan(viewport.width / 2);
+    expect(actionsBox.x).toBeGreaterThan(viewport.width / 2);
+
+    // どちらも画面下部
+    expect(counterBox.y).toBeGreaterThan(viewport.height / 2);
+    expect(actionsBox.y).toBeGreaterThan(viewport.height / 2);
+  });
+
+  test("操作 UI はスライドの中に、手前に重なって出る（FR-18）", async ({ page }) => {
+    // 外側の余白へ出すと pageBackground を濃くしたときに文字が埋もれる
+    await expect(page.locator(".mn-stage > .mn-hud")).toHaveCount(1);
+
+    // cover の背景画像などに埋もれないよう、重なり順も明示している
+    const hudZ = await page
+      .locator(".mn-hud")
+      .evaluate((element) => getComputedStyle(element).zIndex);
+    expect(Number(hudZ)).toBeGreaterThan(0);
+
+    // 進み具合のバーはキャンバスの外（画面の最下部）
+    await expect(page.locator(".mn-deck > .mn-progress")).toHaveCount(1);
+  });
+
   test("進み具合のバーが位置に応じて伸びる（FR-35）", async ({ page }) => {
     const bar = page.locator(".mn-progress__bar");
     const ratio = async (): Promise<number> =>
