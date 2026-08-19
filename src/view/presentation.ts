@@ -1,4 +1,5 @@
 import type { Deck } from "../deck/types";
+import type { AssetBindings } from "./assets";
 import { NavigationController } from "../navigation/controller";
 import {
   isFullscreenSupported,
@@ -17,8 +18,13 @@ import { connectScaler } from "./scaler";
  * デッキを差し替えられるよう、**後始末の関数を返す**。DOM だけでなく購読も解く。
  * `NavigationController` は総ページ数を固定で持つため、デッキごとに作り直す。
  */
-export function startPresentation(deck: Deck, mount: HTMLElement, target: Window): () => void {
-  const view = renderDeck(deck);
+export function startPresentation(
+  deck: Deck,
+  bindings: AssetBindings,
+  mount: HTMLElement,
+  target: Window,
+): () => void {
+  const view = renderDeck(deck, bindings);
   const controller = new NavigationController(deck.slides.length);
 
   // 全画面は使える環境でだけ提供する（FR-17 は Progressive Enhancement）

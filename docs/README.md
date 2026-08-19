@@ -7,7 +7,7 @@
 | [requirements.md](./requirements.md) | 目的、スコープ、機能要件（FR-xx）、非機能要件（NFR-xx）、MVP 受け入れ条件 | 何を作るか確認するとき。実装の是非を判断するとき |
 | [spec-markdown.md](./spec-markdown.md) | 原稿の書き方（Front Matter、スライド分割、`@slide` / `@aside` / `@notes`） | 記法に関わる実装をするとき。README を書くとき |
 | [architecture.md](./architecture.md) | 内部モデル、モジュール構成、DOM とクラス名、CSS トークン、ナビゲーション、テスト戦略 | コードを書く直前 |
-| [roadmap.md](./roadmap.md) | マイルストーン M0〜M6、タスク、完了条件 | 次に何をやるか決めるとき |
+| [roadmap.md](./roadmap.md) | マイルストーン M0〜M7、タスク、完了条件 | 次に何をやるか決めるとき |
 | [decisions.md](./decisions.md) | 確定した設計判断とその理由、未決事項、発表後の評価ログ | 「なぜこうなっているか」を知りたいとき。方針を変えたいとき |
 
 手順書（正典ではない）

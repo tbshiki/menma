@@ -107,6 +107,22 @@
   display: none;
 }
 
+.mn-home__warning {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-inline-start: 4px solid #a86b1d;
+  background: #fdf8f1;
+  color: #6d4413;
+}
+
+.mn-home__warning[hidden] {
+  display: none;
+}
+
+.mn-home__warning-text {
+  margin: 0;
+}
+
 .mn-home__note {
   margin-top: 2.5rem;
   color: #5b6570;
