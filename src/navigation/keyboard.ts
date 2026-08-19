@@ -1,15 +1,63 @@
 import type { NavigationController } from "./controller";
 
 /**
- * キーボード操作（FR-13、FR-14）。
+ * キーボード操作（FR-13、FR-14、FR-17）。
  *
  * ここは入力を解釈するだけで、状態は controller が持つ。
+ * ナビゲーション以外の動作は `actions` で受け取り、キー割り当てをこの 1 か所へ集める。
  */
+
+export type KeyboardActions = {
+  /** `F` キーで呼ぶ。渡さなければそのキーは無視する */
+  toggleFullscreen?: (() => void) | undefined;
+};
 
 /** フォーカスがあるときはページ移動より入力を優先する要素 */
 const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT", "BUTTON"]);
 
-export function connectKeyboard(controller: NavigationController, target: Window): () => void {
+export function connectKeyboard(
+  controller: NavigationController,
+  target: Window,
+  actions: KeyboardActions = {},
+): () => void {
+  const resolveAction = (event: KeyboardEvent): (() => void) | undefined => {
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+      case "PageDown":
+        return () => {
+          controller.next();
+        };
+      case "ArrowLeft":
+      case "ArrowUp":
+      case "PageUp":
+        return () => {
+          controller.previous();
+        };
+      case " ":
+        return event.shiftKey
+          ? () => {
+              controller.previous();
+            }
+          : () => {
+              controller.next();
+            };
+      case "Home":
+        return () => {
+          controller.first();
+        };
+      case "End":
+        return () => {
+          controller.last();
+        };
+      case "f":
+      case "F":
+        return actions.toggleFullscreen;
+      default:
+        return undefined;
+    }
+  };
+
   const onKeyDown = (event: KeyboardEvent): void => {
     // ブラウザ側のショートカットを奪わない
     if (event.ctrlKey || event.altKey || event.metaKey || event.isComposing) {
@@ -28,7 +76,7 @@ export function connectKeyboard(controller: NavigationController, target: Window
 
     // 矢印や Space による画面スクロールを止める
     event.preventDefault();
-    action(controller);
+    action();
   };
 
   target.addEventListener("keydown", onKeyDown);
@@ -36,43 +84,6 @@ export function connectKeyboard(controller: NavigationController, target: Window
   return () => {
     target.removeEventListener("keydown", onKeyDown);
   };
-}
-
-type Action = (controller: NavigationController) => void;
-
-function resolveAction(event: KeyboardEvent): Action | undefined {
-  switch (event.key) {
-    case "ArrowRight":
-    case "ArrowDown":
-    case "PageDown":
-      return (controller) => {
-        controller.next();
-      };
-    case "ArrowLeft":
-    case "ArrowUp":
-    case "PageUp":
-      return (controller) => {
-        controller.previous();
-      };
-    case " ":
-      return event.shiftKey
-        ? (controller) => {
-            controller.previous();
-          }
-        : (controller) => {
-            controller.next();
-          };
-    case "Home":
-      return (controller) => {
-        controller.first();
-      };
-    case "End":
-      return (controller) => {
-        controller.last();
-      };
-    default:
-      return undefined;
-  }
 }
 
 function isEditable(target: EventTarget | null): boolean {

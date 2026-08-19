@@ -208,6 +208,101 @@ test.describe("読み込み直後の初期位置", () => {
   });
 });
 
+test.describe("表示", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(visibleSlide)).toHaveCount(1);
+  });
+
+  test("最初の描画からキャンバスが表示領域に収まっている", async ({ page }) => {
+    // リサイズを挟まずに確認する。初回の倍率計算が誤っていても、
+    // 画面サイズを変えたあとに直ってしまうと気づけないため
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+
+    const box = await page.locator(".mn-stage").boundingBox();
+    expect(box).not.toBeNull();
+
+    if (!viewport || !box) {
+      return;
+    }
+
+    expect(box.width).toBeLessThanOrEqual(viewport.width + 1);
+    expect(box.height).toBeLessThanOrEqual(viewport.height + 1);
+    expect(box.width / box.height).toBeCloseTo(16 / 9, 2);
+  });
+
+  test("ウィンドウの比率を変えても 16:9 を保って表示領域に収まる", async ({ page }) => {
+    for (const size of [
+      { width: 1280, height: 720 },
+      { width: 800, height: 1200 },
+      { width: 1600, height: 600 },
+    ]) {
+      await page.setViewportSize(size);
+
+      // 倍率の再計算は ResizeObserver → 次フレームの順で走るので、反映を待つ
+      await expect(async () => {
+        const box = await page.locator(".mn-stage").boundingBox();
+
+        expect(box).not.toBeNull();
+        if (!box) {
+          return;
+        }
+
+        // 1px は端数の丸め分
+        expect(box.width).toBeLessThanOrEqual(size.width + 1);
+        expect(box.height).toBeLessThanOrEqual(size.height + 1);
+        expect(box.width / box.height).toBeCloseTo(16 / 9, 2);
+      }).toPass({ timeout: 2000 });
+    }
+  });
+
+  test("操作ボタンから移動でき、端では無効になる", async ({ page }) => {
+    const nextButton = page.getByRole("button", { name: "次のスライド" });
+    const previousButton = page.getByRole("button", { name: "前のスライド" });
+
+    await expect(previousButton).toBeDisabled();
+
+    await nextButton.click();
+    expect(await currentPage(page)).toBe(2);
+    await expect(page).toHaveURL(/#\/2$/);
+
+    await previousButton.click();
+    expect(await currentPage(page)).toBe(1);
+
+    await page.keyboard.press("End");
+    await expect(nextButton).toBeDisabled();
+  });
+
+  test("全画面ボタンに読み上げ用の名前がある", async ({ page }) => {
+    await expect(page.getByRole("button", { name: "全画面表示" })).toBeVisible();
+  });
+
+  test("@slide の色指定がスライドへ反映される", async ({ page }) => {
+    const total = await totalPages(page);
+    await page.goto(`/#/${String(total)}`);
+
+    const slide = page.locator(visibleSlide);
+    await expect(slide).toHaveCSS("background-color", "rgb(16, 20, 24)");
+    await expect(slide).toHaveCSS("color", "rgb(242, 245, 248)");
+  });
+
+  test("どのレイアウトでも実際に見えるスライドは 1 枚だけ", async ({ page }) => {
+    // hidden 属性の有無だけでなく、CSS 上も本当に隠れているかを見る。
+    // レイアウト CSS が display を上書きすると、隠したはずのスライドが重なって見えてしまう
+    const total = await totalPages(page);
+
+    for (let page1 = 1; page1 <= total; page1 += 1) {
+      await page.goto(`/#/${String(page1)}`);
+      await expect(page.locator(".mn-slide:visible")).toHaveCount(1);
+      await expect(page.locator(".mn-slide:visible")).toHaveAttribute(
+        "data-index",
+        String(page1 - 1),
+      );
+    }
+  });
+});
+
 test("スライドの layout がそのまま DOM へ出る", async ({ page }) => {
   // サンプル原稿の 1 枚目は cover、3 枚目は center
   await expect(page.locator('.mn-slide[data-index="0"]')).toHaveAttribute("data-layout", "cover");

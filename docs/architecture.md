@@ -117,6 +117,7 @@ src/
 ├── view/                      # DOM 層
 │   ├── renderDeck.ts          # Deck → DOM
 │   ├── renderSlide.ts
+│   ├── cssValue.ts            # 原稿由来の値を CSS へ渡す前の検査
 │   ├── hud.ts                 # ページ番号・操作 UI
 │   ├── errorScreen.ts
 │   └── scaler.ts              # 16:9 フィット
@@ -215,6 +216,7 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 
 - 構造 CSS（`deck.css` / `layouts.css`）とテーマ CSS（`themes/*.css`）を分離する
 - `!important` を原則使わない
+- **レイアウト CSS で `display` を指定しない。** 表示・非表示は `.mn-slide[hidden] { display: none }` が担い、`.mn-slide[data-layout="..."]` と詳細度が同じため、後から読まれるレイアウト側が勝って「隠したはずのスライドが重なって見える」不具合になる。2 カラムは flex の向きと配分で表す
 - クラス名は役割を表す。見た目を表す名前（`.red`、`.big`）を作らない
 - ダークテーマは v1.1。ただし変数構成は最初からテーマ差し替えだけで済む形にする
 
@@ -302,7 +304,7 @@ const md = new MarkdownIt({
 
 | 層 | ツール | 対象 |
 | --- | --- | --- |
-| 単体 | Vitest | Front Matter 解析、スライド分割、ディレクティブ解析、レイアウトのフォールバック、ハッシュの解釈と正規化、clamp |
+| 単体 | Vitest | Front Matter 解析、スライド分割、ディレクティブ解析、レイアウトのフォールバック、ハッシュの解釈と正規化、clamp、倍率計算（`view/scaler.ts`）、CSS 値の検査（`view/cssValue.ts`） |
 | E2E | Playwright（Chromium） | 初期表示、キー操作、ハッシュ同期、直接アクセス、端での停止、リサイズ、外部リンク、エラー画面 |
 | 目視 | サンプルデッキ | 各レイアウト、印刷プレビュー、全画面 |
 

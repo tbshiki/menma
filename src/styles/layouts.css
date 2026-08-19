@@ -1,0 +1,86 @@
+/*
+ * レイアウト別の並べ方（FR-08）。記法仕様 4.3 の描画契約を実装する。
+ * 見た目の値はテーマの変数を使い、ここでは配置だけを決める。
+ *
+ * 重要: ここで `display` を指定しない。
+ * 表示・非表示は `.mn-slide[hidden] { display: none }` が担っていて詳細度が同じため、
+ * レイアウト側で `display` を書くと後勝ちして「隠したはずのスライドが見える」不具合になる。
+ * 2 カラムは `.mn-slide` 既定の flex の向きと配分で表す。
+ */
+
+/* default: 上から順に読ませる標準の組み方 */
+.mn-slide[data-layout="default"] {
+  justify-content: flex-start;
+}
+
+/* center: 1 スライド 1 メッセージ。上下左右の中央へ置く */
+.mn-slide[data-layout="center"] {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.mn-slide[data-layout="center"] :where(h1) {
+  font-size: var(--mn-size-title);
+}
+
+/* cover: 表紙。背景画像があれば全面へ敷く */
+.mn-slide[data-layout="cover"] {
+  align-items: flex-start;
+  justify-content: center;
+  background-image: var(--mn-slide-bg-image, none);
+  background-position: center;
+  background-size: cover;
+}
+
+.mn-slide[data-layout="cover"] :where(h1) {
+  font-size: var(--mn-size-title);
+}
+
+.mn-slide[data-layout="cover"] :where(p) {
+  color: var(--mn-slide-fg, var(--mn-muted));
+  font-size: var(--mn-size-subheading);
+}
+
+/* split / image-right: 主要部が左、補助部が右 */
+.mn-slide:is([data-layout="split"], [data-layout="image-right"]) {
+  align-items: center;
+  flex-direction: row;
+}
+
+/* image-left: 補助部を左へ回す。DOM の順序（本文 → 補助）は変えない */
+.mn-slide[data-layout="image-left"] {
+  align-items: center;
+  flex-direction: row-reverse;
+}
+
+.mn-slide:is([data-layout="split"], [data-layout="image-left"], [data-layout="image-right"])
+  > :where(.mn-slide__main, .mn-slide__aside) {
+  max-height: 100%;
+  flex: 1 1 0;
+  overflow-y: auto;
+}
+
+/* quote: 引用そのものを主役にする */
+.mn-slide[data-layout="quote"] {
+  align-items: center;
+  justify-content: center;
+}
+
+.mn-slide[data-layout="quote"] :where(blockquote) {
+  max-width: 80%;
+  border: none;
+  color: var(--mn-slide-fg, var(--mn-fg));
+  font-size: var(--mn-size-subheading);
+  text-align: center;
+}
+
+.mn-slide[data-layout="quote"] :where(blockquote p) {
+  margin-block: 0.4em;
+}
+
+/* blank: 下地だけ。余白も装飾も持たない */
+.mn-slide[data-layout="blank"] {
+  padding: 0;
+  gap: 0;
+}

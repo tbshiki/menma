@@ -1,31 +1,48 @@
 /*
- * 構造 CSS。色・書体・余白の見た目はテーマ（M3 の themes/default.css）が受け持つ。
- * ここには「どう並ぶか」だけを書く。
+ * 構造 CSS。色・書体・大きさの値はテーマ（themes/*.css）が持つ。
+ * ここには「どう並ぶか」と、本文要素の組み方を書く。
  */
 
 .mn-deck {
-  position: relative;
-  display: flex;
-  min-height: 100vh;
-  flex-direction: column;
+  display: grid;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  background: var(--mn-page-bg, #000);
+  color: var(--mn-fg);
+  font-family: var(--mn-font-sans);
+  place-items: center;
 }
 
-/* 16:9 の基準キャンバス。スケーリングは M3 で scaler.ts が担当する */
+/*
+ * 基準キャンバス。ここが 16:9 の正典で、scaler.ts はこの実寸を読んで倍率を決める（設計 5.2）。
+ * 大きさを変えるときは JS ではなくこの 2 行を変える。
+ */
 .mn-stage {
   position: relative;
-  display: flex;
-  flex: 1;
-  align-items: stretch;
-  justify-content: center;
+  width: 1600px;
+  height: 900px;
+  flex: none;
+  background: var(--mn-bg);
+  transform: scale(var(--mn-scale, 1));
+  transform-origin: center center;
 }
 
 .mn-slide {
+  position: absolute;
   display: flex;
+  overflow: hidden;
   width: 100%;
+  height: 100%;
   box-sizing: border-box;
   flex-direction: column;
-  padding: 4vmin 6vmin;
-  gap: 2vmin;
+  padding: var(--mn-space);
+  background-color: var(--mn-slide-bg, var(--mn-bg));
+  color: var(--mn-slide-fg, var(--mn-fg));
+  font-size: var(--mn-size-body);
+  gap: var(--mn-gap);
+  inset: 0;
+  line-height: var(--mn-line-height);
 }
 
 .mn-slide[hidden] {
@@ -35,15 +52,124 @@
 .mn-slide__main,
 .mn-slide__aside {
   min-width: 0;
+  min-height: 0;
 }
+
+/* ---- 本文要素 ---------------------------------------------------------- */
+
+.mn-slide :where(h1) {
+  font-size: var(--mn-size-heading);
+  line-height: var(--mn-heading-line-height);
+}
+
+.mn-slide :where(h2) {
+  font-size: var(--mn-size-subheading);
+  line-height: var(--mn-heading-line-height);
+}
+
+.mn-slide :where(h3, h4, h5, h6) {
+  font-size: var(--mn-size-body);
+  line-height: var(--mn-heading-line-height);
+}
+
+.mn-slide :where(p, ul, ol, blockquote, pre, table, figure) {
+  margin-block: 0.6em;
+}
+
+.mn-slide :where(ul, ol) {
+  padding-inline-start: 1.4em;
+}
+
+.mn-slide :where(li) {
+  margin-block: 0.3em;
+}
+
+.mn-slide :where(a) {
+  color: var(--mn-accent);
+  text-underline-offset: 0.15em;
+}
+
+.mn-slide :where(strong) {
+  font-weight: 700;
+}
+
+.mn-slide :where(code) {
+  padding: 0.1em 0.3em;
+  border-radius: calc(var(--mn-radius) / 2);
+  background: var(--mn-code-bg);
+  font-family: var(--mn-font-mono);
+  font-size: var(--mn-size-code);
+}
+
+.mn-slide :where(pre) {
+  overflow: auto;
+  padding: 0.8em 1em;
+  border-radius: var(--mn-radius);
+  background: var(--mn-code-bg);
+}
+
+.mn-slide :where(pre code) {
+  padding: 0;
+  background: none;
+  line-height: 1.5;
+}
+
+.mn-slide :where(blockquote) {
+  padding-inline-start: 0.8em;
+  border-inline-start: 6px solid var(--mn-rule);
+  color: var(--mn-muted);
+}
+
+.mn-slide :where(table) {
+  border-collapse: collapse;
+  font-size: calc(var(--mn-size-body) * 0.9);
+}
+
+.mn-slide :where(th, td) {
+  padding: 0.4em 0.8em;
+  border-bottom: 2px solid var(--mn-rule);
+  text-align: start;
+}
+
+.mn-slide :where(th) {
+  color: var(--mn-muted);
+  font-weight: 600;
+}
+
+/* 画像は領域内へ収める（FR-10） */
+.mn-slide :where(img) {
+  max-width: 100%;
+  max-height: 100%;
+  margin-inline: auto;
+  object-fit: contain;
+}
+
+.mn-slide :where(hr) {
+  border: none;
+  border-top: 2px solid var(--mn-rule);
+}
+
+/* ---- 操作 UI ------------------------------------------------------------ */
 
 .mn-hud {
   position: fixed;
-  right: 2vmin;
-  bottom: 2vmin;
+  right: 1.5vmin;
+  bottom: 1.5vmin;
+  display: flex;
+  align-items: center;
+  color: var(--mn-fg);
+  font-family: var(--mn-font-sans);
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
-  opacity: 0.5;
-  pointer-events: none;
+  gap: 12px;
+  /* 発表の邪魔をしない。触れたときだけはっきり見せる */
+  opacity: 0.25;
+  transition: opacity 0.2s ease-out;
+}
+
+.mn-hud:hover,
+.mn-hud:focus-within {
+  opacity: 1;
 }
 
 .mn-hud[hidden] {
@@ -52,9 +178,47 @@
 
 .mn-hud__counter {
   margin: 0;
-  font-size: 0.9rem;
+}
+
+.mn-hud__counter[hidden] {
+  display: none;
+}
+
+.mn-hud__actions {
+  display: flex;
+  gap: 4px;
+}
+
+.mn-hud__actions[hidden] {
+  display: none;
+}
+
+.mn-hud__button {
+  width: 2em;
+  height: 2em;
+  padding: 0;
+  border: 1px solid var(--mn-rule);
+  border-radius: var(--mn-radius);
+  background: var(--mn-bg);
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.mn-hud__button:disabled {
+  cursor: default;
+  opacity: 0.4;
 }
 
 .mn-error {
   padding: 4vmin 6vmin;
+  color: #14181d;
+  font-family: system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mn-hud {
+    transition: none;
+  }
 }

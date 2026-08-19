@@ -27,13 +27,14 @@
 | M0 | プロジェクト基盤 | ビルドと検証の土台を作る | NFR-01, NFR-09 | 完了 |
 | M1 | パーサ | Markdown を Deck モデルへ変換する | FR-01〜FR-07 | 完了 |
 | M2 | 発表コア | 実際の LT で最低限使える状態にする | FR-13〜FR-16, FR-18 | 完了 |
-| M3 | 表示品質 | 会場のプロジェクタで安定して見せられる | FR-08〜FR-11, FR-17 | **次はここ** |
+| M3 | 表示品質 | 会場のプロジェクタで安定して見せられる | FR-08〜FR-11, FR-17 | 完了 |
+| — | ゲート | 実際の発表で 1 回使って評価する（6 章） | — | **次はここ** |
 | M4 | 堅牢性と検証 | 壊れ方を設計し、CI で守る | FR-19〜FR-23, NFR-09 | 未着手 |
 | M5 | リリース準備 | 他人が使い始められる状態にする | 受け入れ条件全項目 | 未着手 |
 
-現時点で動くこと: `slides.md` がスライドとして表示され、キーボードと `#/N` の URL で移動できる。見た目（16:9 スケーリング、テーマ、レイアウト）と全画面は M3 で入れる。
+現時点で動くこと: `slides.md` が 16:9 のスライドとして表示され、キーボード・操作ボタン・`#/N` の URL で移動できる。8 レイアウトとテーマ、全画面（`F` キー）も入っている。エラー画面・印刷・CI は M4。
 
-M2 と M3 の間に**実際の発表で 1 回使う**ゲートを置く（6 章）。
+**次は機能追加ではなく、6 章のゲート（実際に 1 回発表して評価する）。**
 
 ## 2. M0 — プロジェクト基盤
 
@@ -100,15 +101,15 @@ M2 と M3 の間に**実際の発表で 1 回使う**ゲートを置く（6 章�
 
 タスク
 
-- [ ] `view/scaler.ts` の 16:9 フィット（FR-09、`ResizeObserver`）
-- [ ] `navigation/fullscreen.ts`（FR-17、非対応環境のフォールバック）
-- [ ] デフォルトテーマ `themes/default.css`（FR-11、CSS 変数のみ）
-- [ ] 8 レイアウトの `layouts.css`（FR-08）
-- [ ] `@slide` の `background` / `backgroundColor` / `foreground` の適用。値は `element.style.setProperty()` で CSS 変数として渡し、HTML 文字列や CSS テキストへ連結しない（NFR-07）
-- [ ] 画像・コードブロック・表・引用のスタイル（FR-04、FR-10）
-- [ ] HUD の減光・`showControls` / `showPageNumber` 対応（FR-18）
-- [ ] E2E シナリオ 9（リサイズ）
-- [ ] サンプル `slides.md` を全レイアウト網羅へ更新する
+- [x] `view/scaler.ts` の 16:9 フィット（FR-09、`ResizeObserver`）
+- [x] `navigation/fullscreen.ts`（FR-17、非対応環境のフォールバック）
+- [x] デフォルトテーマ `themes/default.css`（FR-11、CSS 変数のみ）
+- [x] 8 レイアウトの `layouts.css`（FR-08）
+- [x] `@slide` の `background` / `backgroundColor` / `foreground` の適用。値は `element.style.setProperty()` で CSS 変数として渡し、HTML 文字列や CSS テキストへ連結しない（NFR-07）
+- [x] 画像・コードブロック・表・引用のスタイル（FR-04、FR-10）
+- [x] HUD の減光・`showControls` / `showPageNumber` 対応（FR-18）
+- [x] E2E シナリオ 9（リサイズ）
+- [x] サンプル `slides.md` を全レイアウト網羅へ更新する
 
 完了条件
 

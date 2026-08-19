@@ -10,6 +10,8 @@ import { renderSlide } from "./renderSlide";
 
 export type DeckView = {
   root: HTMLElement;
+  /** 16:9 の基準キャンバス。拡縮の対象（設計 5.2） */
+  stage: HTMLElement;
   /** 表示するスライドを切り替える */
   showSlide(index: number): void;
 };
@@ -40,6 +42,7 @@ export function renderDeck(deck: Deck): DeckView {
 
   return {
     root,
+    stage,
     showSlide(index: number): void {
       const next = slides[index];
 

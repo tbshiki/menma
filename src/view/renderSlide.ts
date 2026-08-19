@@ -1,4 +1,5 @@
 import type { Slide } from "../deck/types";
+import { toCssUrl } from "./cssValue";
 
 /**
  * 1 枚のスライドを DOM へ起こす（設計 4 章）。
@@ -16,6 +17,8 @@ export function renderSlide(slide: Slide): HTMLElement {
     section.classList.add(...slide.classes);
   }
 
+  applyAppearance(section, slide);
+
   const main = document.createElement("div");
   main.className = "mn-slide__main";
   // innerHTML へ渡してよいのは Markdown パーサの出力だけ（NFR-07）。
@@ -31,4 +34,28 @@ export function renderSlide(slide: Slide): HTMLElement {
   }
 
   return section;
+}
+
+/**
+ * `@slide` で指定された見た目をスライドへ渡す。
+ *
+ * 値は CSS Custom Property として `setProperty()` で設定し、HTML 文字列や CSS テキストへは
+ * 連結しない（NFR-07）。カスタムプロパティは `var()` で展開されるとき構文検査を受けるため、
+ * 壊れた値を書いても宣言が無効になるだけで、別の宣言を差し込むことはできない。
+ */
+function applyAppearance(section: HTMLElement, slide: Slide): void {
+  if (slide.backgroundColor !== undefined) {
+    section.style.setProperty("--mn-slide-bg", slide.backgroundColor);
+  }
+
+  if (slide.foreground !== undefined) {
+    section.style.setProperty("--mn-slide-fg", slide.foreground);
+  }
+
+  if (slide.background !== undefined) {
+    const url = toCssUrl(slide.background);
+    if (url !== undefined) {
+      section.style.setProperty("--mn-slide-bg-image", url);
+    }
+  }
 }

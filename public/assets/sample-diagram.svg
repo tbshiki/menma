@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-labelledby="title">
+  <title id="title">Markdown から HTML を経てスライドになる流れ</title>
+  <rect width="480" height="360" fill="#f4f6f8" />
+  <g fill="none" stroke="#1d5fa8" stroke-width="3">
+    <rect x="60" y="40" width="150" height="70" rx="8" />
+    <rect x="270" y="40" width="150" height="70" rx="8" />
+    <rect x="165" y="230" width="150" height="70" rx="8" />
+    <path d="M210 75h50" marker-end="url(#arrow)" />
+    <path d="M345 110v70q0 20-20 20h-25" marker-end="url(#arrow)" />
+    <path d="M135 110v70q0 20 20 20h25" marker-end="url(#arrow)" />
+  </g>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0l10 5-10 5z" fill="#1d5fa8" />
+    </marker>
+  </defs>
+  <g fill="#14181d" font-family="system-ui, sans-serif" font-size="20" text-anchor="middle">
+    <text x="135" y="82">Markdown</text>
+    <text x="345" y="82">HTML</text>
+    <text x="240" y="272">Slides</text>
+  </g>
+</svg>

@@ -1,0 +1,39 @@
+/*
+ * 既定テーマ（FR-11）。
+ *
+ * ここは値だけを持ち、DOM 構造やレイアウトには関与しない。
+ * テーマを増やすときはこのファイルを複製して値を差し替える。
+ * 数値は基準キャンバス 1600x900 px の上での大きさ。
+ */
+
+.mn-deck[data-theme="default"] {
+  /* 色 */
+  --mn-bg: #ffffff;
+  --mn-fg: #14181d;
+  --mn-muted: #5b6570;
+  --mn-accent: #1d5fa8;
+  --mn-code-bg: #f4f6f8;
+  --mn-rule: #d8dee4;
+
+  /* 書体 */
+  --mn-font-sans:
+    system-ui, "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+  --mn-font-mono: ui-monospace, "Cascadia Mono", Consolas, "Noto Sans Mono", monospace;
+
+  /* 文字の大きさ */
+  --mn-size-title: 104px;
+  --mn-size-heading: 64px;
+  --mn-size-subheading: 44px;
+  --mn-size-body: 34px;
+  --mn-size-code: 26px;
+  --mn-size-caption: 24px;
+
+  /* 余白と角丸 */
+  --mn-space: 72px;
+  --mn-gap: 32px;
+  --mn-radius: 8px;
+
+  /* 行の詰め方 */
+  --mn-line-height: 1.6;
+  --mn-heading-line-height: 1.25;
+}
