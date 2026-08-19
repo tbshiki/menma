@@ -71,7 +71,7 @@ try {
     });
   }
 } catch (error) {
-  // 専用のエラー画面は M4（view/errorScreen.ts）で作る。それまでの暫定表示
+  // 専用のエラー画面は M5（view/errorScreen.ts）で作る。それまでの暫定表示
   const fallback = document.createElement("p");
   fallback.className = "mn-error";
   fallback.textContent =

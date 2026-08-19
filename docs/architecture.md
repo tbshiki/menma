@@ -103,10 +103,12 @@ export type Deck = {
 
 ```text
 src/
-├── main.ts                    # エントリ。組み立てのみ
+├── main.ts                    # エントリ。起動して app へ渡すだけ
+├── app.ts                     # 画面の切り替え（入口 ⇄ スライド）とデッキの差し替え（14 章）
 │
 ├── deck/                      # 純粋層。DOM を import しない
 │   ├── types.ts
+│   ├── source.ts              # 原稿の取得元と localStorage への保存・復元（14 章）
 │   ├── errors.ts              # DeckError（回復不能なエラーだけを投げる）
 │   ├── parseDeck.ts           # 下の 4 つを束ねる
 │   ├── parseFrontMatter.ts
@@ -116,6 +118,7 @@ src/
 │   └── markdown.ts            # markdown-it の設定とレンダリング
 │
 ├── view/                      # DOM 層
+│   ├── home.ts                # 入口画面（ファイル選択・貼り付け・サンプル）
 │   ├── renderDeck.ts          # Deck → DOM
 │   ├── renderSlide.ts
 │   ├── cssValue.ts            # 原稿由来の値を CSS へ渡す前の検査
@@ -353,3 +356,71 @@ menma/
 ```
 
 AI 開発基盤（`AGENTS.md` / `CLAUDE.md` / `skills/` / `scripts/` / `.claude/` / `.agents/`）は既存の構成を維持する。
+
+## 14. 原稿の入力と画面の切り替え（v0.2.0）
+
+画面は 2 つだけ。**どちらを出すかはハッシュの有無で決まる。**
+
+| URL | 画面 |
+| --- | --- |
+| `/`（ハッシュ無し） | 入口画面。ファイル選択・貼り付け・サンプルの 3 つの入口 |
+| `/#/N` | スライド。原稿が読み込まれていなければ入口へ戻す |
+
+### 14.1 原稿の取得元
+
+```ts
+export type DeckSource =
+  | { kind: "sample" }
+  | { kind: "file"; name: string; text: string }
+  | { kind: "text"; text: string };
+```
+
+`sample` は本文を持たない。バンドル済みの `slides.md` を使うため、保存する必要がないため。
+
+保存は `localStorage` の 1 キー（`menma:source`）へ、形式の版を付けて置く。
+
+```ts
+type StoredSource = { version: 1; source: DeckSource };
+```
+
+版を付けるのは、後で形式を変えたときに古い値を捨てられるようにするため。読み込みで形が合わなければ黙って捨て、入口画面から始める。
+
+**原稿は URL へ載せない（[D-19](./decisions.md)）。** 共有リンクから任意の内容を表示できると、menma のドメインで偽の資料を見せられるため。12 章の「URL からの HTML 生成を行わない」と同じ理由。
+
+### 14.2 デッキの差し替え
+
+`app.ts` が画面の生存期間を持つ。スライド画面を作る処理は**後始末の関数を返す**。
+
+```ts
+function startPresentation(deck: Deck, mount: HTMLElement): () => void;
+```
+
+後始末で解くもの。
+
+- `renderDeck` が作った DOM（`root.remove()`）
+- `controller.subscribe()` の購読
+- `connectHash` / `connectKeyboard` / `connectScaler` / `onFullscreenChange` の解除関数
+
+`NavigationController` は総ページ数を固定で持つため、デッキが変わったら**作り直す**。古いインスタンスを使い回さない。
+
+### 14.3 画面の行き来
+
+- 入口でデッキを選ぶ → `history.pushState` で `#/1` を積み、スライドを構築する
+- ブラウザの戻る → `popstate` でハッシュが消える → スライドを後始末して入口へ戻す
+- 発表画面に「戻る」ボタンは置かない（[D-19](./decisions.md)）
+
+`connectHash` はスライド表示中だけ有効にする。入口画面では解除しておき、ハッシュの正規化が走らないようにする。
+
+### 14.4 読み込みの失敗
+
+失敗は入口画面へ理由を出し、**直前の状態を壊さない**（表示中のデッキがあればそのまま）。
+
+| 状況 | 扱い |
+| --- | --- |
+| 対応外の拡張子 | 受け付けず、対応する拡張子を伝える |
+| 空、または空白だけ | 受け付けず、原稿が空であることを伝える |
+| `DeckError`（スライド 0 枚、Front Matter が閉じない） | 理由を伝える。保存もしない |
+
+### 14.5 画像の扱い
+
+読み込んだ原稿の**相対パス画像は表示できない**。ブラウザはファイルの隣にあるファイルを読めないため。絶対 URL の画像は表示できる。フォルダごと取り込む対応は v0.3.0（ロードマップ 10 章）。
