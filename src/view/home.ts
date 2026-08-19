@@ -1,14 +1,24 @@
-import { SUPPORTED_EXTENSIONS, isSupportedFileName, type DeckSource } from "../deck/source";
+import {
+  SUPPORTED_EXTENSIONS,
+  SUPPORTED_IMAGE_EXTENSIONS,
+  type DeckAsset,
+  type DeckSource,
+} from "../deck/source";
+import { describeRejected, selectFiles } from "./fileSelection";
 
 /**
- * 入口画面（FR-24〜FR-26、FR-29）。
+ * 入口画面（FR-24〜FR-26、FR-29、FR-30、FR-33、FR-34）。
  *
  * 原稿の渡し方は 3 つだけ。ここは受け取るだけで、解釈も描画もしない。
  */
 
 export type HomeOptions = {
-  /** 原稿が決まったときに呼ばれる */
-  onSource: (source: DeckSource) => void;
+  /**
+   * 原稿が決まったときに呼ばれる。
+   *
+   * `notice` は取り込めなかったファイルの知らせ。開く前に伝えるかどうかは呼び出し側が決める
+   */
+  onSource: (source: DeckSource, notice?: string) => void;
   /** 保存された原稿があるときだけ渡す。「前回の原稿を開く」を出すため */
   onResume?: (() => void) | undefined;
   /** 保存された原稿があるときだけ渡す。「保存を消す」を出すため */
@@ -19,6 +29,8 @@ export type HomeView = {
   root: HTMLElement;
   /** 受け付けられなかった理由を表示する */
   showError(message: string): void;
+  /** 開けるが伝えておきたいことを表示し、そのまま進む手段を添える */
+  showWarning(message: string, onContinue: () => void): void;
   /** 後始末（登録したイベントを解く） */
   destroy(): void;
 };
@@ -38,14 +50,28 @@ export function createHome(options: HomeOptions): HomeView {
   const note = document.createElement("p");
   note.className = "mn-home__note";
   note.textContent =
-    "原稿はこのブラウザの中だけで扱います。どこにも送信しません。読み込んだ原稿の相対パス画像は表示できません。";
+    "原稿も画像もこのブラウザの中だけで扱います。どこにも送信しません。画像は原稿と一緒に選んでください（ファイル名で結び付けます）。";
 
   const error = document.createElement("p");
   error.className = "mn-home__error";
   error.setAttribute("role", "alert");
   error.hidden = true;
 
-  root.append(title, lead, error);
+  const warning = document.createElement("div");
+  warning.className = "mn-home__warning";
+  // 受け付けられなかった知らせ（alert）とは役割を分ける。開けるが伝えておきたい状態
+  warning.setAttribute("role", "status");
+  warning.hidden = true;
+
+  const warningText = document.createElement("p");
+  warningText.className = "mn-home__warning-text";
+  const warningButton = document.createElement("button");
+  warningButton.type = "button";
+  warningButton.className = "mn-home__button";
+  warningButton.textContent = "このまま開く";
+  warning.append(warningText, warningButton);
+
+  root.append(title, lead, error, warning);
 
   if (options.onResume) {
     root.append(createResumeSection(options.onResume));
@@ -58,58 +84,90 @@ export function createHome(options: HomeOptions): HomeView {
     error.hidden = false;
   };
 
-  const clearError = (): void => {
+  const clearMessages = (): void => {
     error.textContent = "";
     error.hidden = true;
+    warning.hidden = true;
   };
 
-  const acceptFile = (file: File | undefined): void => {
-    if (!file) {
+  const acceptFiles = (files: readonly File[]): void => {
+    if (files.length === 0) {
       return;
     }
 
-    if (!isSupportedFileName(file.name)) {
+    const selection = selectFiles(files);
+    const rejected = describeRejected(selection.rejected);
+
+    if (!selection.markdown) {
+      // 何が受け付けられなかったかも一緒に伝える
       showError(
-        `${file.name} は読み込めません。${SUPPORTED_EXTENSIONS.join(" / ")} を選んでください。`,
+        [
+          `Markdown が見つかりません。${SUPPORTED_EXTENSIONS.join(" / ")} のファイルを一緒に選んでください。`,
+          rejected,
+        ]
+          .filter((part) => part !== undefined)
+          .join(" "),
       );
       return;
     }
 
-    void file
-      .text()
-      .then((text) => {
-        if (text.trim() === "") {
-          showError(`${file.name} は空でした。`);
+    const markdown = selection.markdown;
+
+    void Promise.all([markdown.text(), ...selection.assets.map(toDeckAsset)])
+      .then(([text, ...assets]) => {
+        if (typeof text !== "string" || text.trim() === "") {
+          showError(`${markdown.name} は空でした。`);
           return;
         }
-        clearError();
-        options.onSource({ kind: "file", name: file.name, text });
+
+        clearMessages();
+        options.onSource(
+          {
+            kind: "file",
+            name: markdown.name,
+            text,
+            assets: assets as DeckAsset[],
+          },
+          rejected,
+        );
       })
       .catch(() => {
-        showError(`${file.name} を読み込めませんでした。`);
+        showError(`${markdown.name} を読み込めませんでした。`);
       });
   };
 
   root.append(
-    createFileSection(acceptFile, cleanups),
+    createFileSection(acceptFiles, cleanups),
     createTextSection((text) => {
       if (text.trim() === "") {
         showError("原稿が空です。Markdown を貼り付けてください。");
         return;
       }
-      clearError();
-      options.onSource({ kind: "text", text });
+      clearMessages();
+      options.onSource({ kind: "text", text, assets: [] });
     }),
     createSampleSection(() => {
-      clearError();
+      clearMessages();
       options.onSource({ kind: "sample" });
     }, options.onClearStored),
     note,
   );
 
+  let continueHandler: (() => void) | undefined;
+  warningButton.addEventListener("click", () => {
+    continueHandler?.();
+  });
+
   return {
     root,
     showError,
+
+    showWarning(message: string, onContinue: () => void): void {
+      warningText.textContent = message;
+      continueHandler = onContinue;
+      warning.hidden = false;
+    },
+
     destroy(): void {
       for (const cleanup of cleanups) {
         cleanup();
@@ -117,6 +175,11 @@ export function createHome(options: HomeOptions): HomeView {
       root.remove();
     },
   };
+}
+
+async function toDeckAsset(file: File): Promise<DeckAsset> {
+  // Blob のまま持つ。IndexedDB は構造化クローンで保存できる（設計 15.3）
+  return { name: file.name, blob: file.slice(0, file.size, file.type) };
 }
 
 function createResumeSection(onResume: () => void) {
@@ -132,19 +195,19 @@ function createResumeSection(onResume: () => void) {
   return section;
 }
 
-function createFileSection(onFile: (file: File | undefined) => void, cleanups: (() => void)[]) {
+function createFileSection(onFiles: (files: readonly File[]) => void, cleanups: (() => void)[]) {
   const section = createSection(
     "ファイルを開く",
-    "手元の Markdown を選ぶか、ここへ落としてください。",
+    "Markdown と、原稿が使う画像をまとめて選ぶか、ここへ落としてください。",
   );
 
   const input = document.createElement("input");
   input.type = "file";
   input.className = "mn-home__file";
-  input.accept = SUPPORTED_EXTENSIONS.join(",");
+  input.multiple = true;
+  input.accept = [...SUPPORTED_EXTENSIONS, ...SUPPORTED_IMAGE_EXTENSIONS].join(",");
   input.addEventListener("change", () => {
-    // 複数選ばれても 1 つ目だけを使う（FR-25）
-    onFile(input.files?.[0]);
+    onFiles([...(input.files ?? [])]);
     // 同じファイルを選び直せるように値を戻す
     input.value = "";
   });
@@ -163,7 +226,7 @@ function createFileSection(onFile: (file: File | undefined) => void, cleanups: (
   const onDrop = (event: DragEvent): void => {
     event.preventDefault();
     delete drop.dataset.active;
-    onFile(event.dataTransfer?.files[0]);
+    onFiles([...(event.dataTransfer?.files ?? [])]);
   };
 
   drop.addEventListener("dragover", onDragOver);

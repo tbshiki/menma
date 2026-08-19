@@ -1,41 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
-  clearStoredSource,
+  SOURCE_FORMAT_VERSION,
   isSupportedFileName,
-  loadStoredSource,
+  isSupportedImageName,
   readSourceText,
-  saveSource,
+  sourceAssets,
+  toStoredDeckSource,
   type DeckSource,
 } from "../../src/deck/source";
 
-/** localStorage の代わり。壊れた値や失敗する保存も再現できるようにしておく */
-function createStorage(initial: Record<string, string> = {}): Storage {
-  const data = new Map(Object.entries(initial));
-
-  return {
-    get length() {
-      return data.size;
-    },
-    clear: () => {
-      data.clear();
-    },
-    getItem: (key: string) => data.get(key) ?? null,
-    key: (index: number) => [...data.keys()][index] ?? null,
-    removeItem: (key: string) => {
-      data.delete(key);
-    },
-    setItem: (key: string, value: string) => {
-      data.set(key, value);
-    },
-  };
+function stored(source: unknown, version: number = SOURCE_FORMAT_VERSION): unknown {
+  return { version, source };
 }
-
-let storage: Storage;
-
-beforeEach(() => {
-  storage = createStorage();
-});
 
 describe("isSupportedFileName", () => {
   it("Markdown とテキストを受け付ける", () => {
@@ -51,79 +28,75 @@ describe("isSupportedFileName", () => {
   });
 });
 
-describe("readSourceText", () => {
-  it("サンプルは同梱の本文を使う", () => {
-    expect(readSourceText({ kind: "sample" }, "サンプル本文")).toBe("サンプル本文");
-  });
-
-  it("ファイルと貼り付けは自分の本文を使う", () => {
-    expect(readSourceText({ kind: "file", name: "a.md", text: "A" }, "サンプル")).toBe("A");
-    expect(readSourceText({ kind: "text", text: "B" }, "サンプル")).toBe("B");
-  });
-});
-
-describe("saveSource / loadStoredSource", () => {
-  it("保存した取得元を読み戻せる", () => {
-    const sources: DeckSource[] = [
-      { kind: "sample" },
-      { kind: "text", text: "# 貼り付け" },
-      { kind: "file", name: "talk.md", text: "# ファイル" },
-    ];
-
-    for (const source of sources) {
-      saveSource(storage, source);
-      expect(loadStoredSource(storage)).toEqual(source);
+describe("isSupportedImageName", () => {
+  it("対応する画像形式を受け付ける", () => {
+    for (const name of ["a.png", "B.JPG", "c.jpeg", "d.gif", "e.webp", "f.avif", "g.svg"]) {
+      expect(isSupportedImageName(name)).toBe(true);
     }
   });
 
-  it("何も保存されていなければ undefined", () => {
-    expect(loadStoredSource(storage)).toBeUndefined();
+  it("画像でない拡張子は受け付けない", () => {
+    for (const name of ["a.md", "b.pdf", "c.mp4", "d.zip"]) {
+      expect(isSupportedImageName(name)).toBe(false);
+    }
+  });
+});
+
+describe("readSourceText / sourceAssets", () => {
+  it("サンプルは同梱の本文を使い、画像を持たない", () => {
+    const sample: DeckSource = { kind: "sample" };
+
+    expect(readSourceText(sample, "サンプル本文")).toBe("サンプル本文");
+    expect(sourceAssets(sample)).toEqual([]);
   });
 
-  it("壊れた値は捨てる", () => {
-    for (const raw of ["", "{", "null", '"文字列"', "[]"]) {
-      storage.setItem("menma:source", raw);
-      expect(loadStoredSource(storage)).toBeUndefined();
+  it("ファイルと貼り付けは自分の本文と画像を使う", () => {
+    const asset = { name: "a.png", blob: new Blob(["x"]) };
+
+    expect(readSourceText({ kind: "file", name: "a.md", text: "A", assets: [] }, "サンプル")).toBe(
+      "A",
+    );
+    expect(sourceAssets({ kind: "text", text: "B", assets: [asset] })).toEqual([asset]);
+  });
+});
+
+describe("toStoredDeckSource", () => {
+  it("保存された取得元を読み戻せる", () => {
+    const asset = { name: "a.png", blob: new Blob(["x"]) };
+    const sources: DeckSource[] = [
+      { kind: "sample" },
+      { kind: "text", text: "# 貼り付け", assets: [] },
+      { kind: "file", name: "talk.md", text: "# ファイル", assets: [asset] },
+    ];
+
+    for (const source of sources) {
+      expect(toStoredDeckSource(stored(source))).toEqual(source);
     }
   });
 
   it("版が違う保存は捨てる", () => {
-    storage.setItem("menma:source", JSON.stringify({ version: 99, source: { kind: "sample" } }));
-
-    expect(loadStoredSource(storage)).toBeUndefined();
+    expect(toStoredDeckSource(stored({ kind: "sample" }, 99))).toBeUndefined();
   });
 
   it("形の合わない取得元は捨てる", () => {
-    for (const source of [{ kind: "unknown" }, { kind: "text" }, { kind: "file", name: "a.md" }]) {
-      storage.setItem("menma:source", JSON.stringify({ version: 1, source }));
-      expect(loadStoredSource(storage)).toBeUndefined();
+    const broken = [
+      { kind: "unknown" },
+      { kind: "text" },
+      { kind: "file", name: "a.md" },
+      { kind: "text", text: "本文" },
+      { kind: "text", text: "本文", assets: "画像ではない" },
+      { kind: "text", text: "本文", assets: [{ name: "a.png" }] },
+      { kind: "text", text: "本文", assets: [{ name: "a.png", blob: "Blob ではない" }] },
+    ];
+
+    for (const source of broken) {
+      expect(toStoredDeckSource(stored(source))).toBeUndefined();
     }
   });
 
-  it("保存を消せる", () => {
-    saveSource(storage, { kind: "sample" });
-    clearStoredSource(storage);
-
-    expect(loadStoredSource(storage)).toBeUndefined();
-  });
-
-  it("保存に失敗しても例外を投げない（容量超過など）", () => {
-    const failing = createStorage();
-    vi.spyOn(failing, "setItem").mockImplementation(() => {
-      throw new Error("QuotaExceededError");
-    });
-
-    expect(() => {
-      saveSource(failing, { kind: "text", text: "長い原稿" });
-    }).not.toThrow();
-  });
-
-  it("読み取りに失敗しても例外を投げない（プライベートモードなど）", () => {
-    const failing = createStorage();
-    vi.spyOn(failing, "getItem").mockImplementation(() => {
-      throw new Error("SecurityError");
-    });
-
-    expect(loadStoredSource(failing)).toBeUndefined();
+  it("保存の形そのものが壊れていたら捨てる", () => {
+    for (const value of [null, undefined, "文字列", 42, [], {}]) {
+      expect(toStoredDeckSource(value)).toBeUndefined();
+    }
   });
 });

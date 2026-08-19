@@ -1,4 +1,5 @@
 import type { Deck } from "../deck/types";
+import type { AssetBindings } from "./assets";
 import { renderSlide } from "./renderSlide";
 
 /**
@@ -16,7 +17,7 @@ export type DeckView = {
   showSlide(index: number): void;
 };
 
-export function renderDeck(deck: Deck): DeckView {
+export function renderDeck(deck: Deck, bindings: AssetBindings): DeckView {
   const root = document.createElement("div");
   root.className = "mn-deck";
   root.dataset.theme = deck.meta.theme;
@@ -25,7 +26,7 @@ export function renderDeck(deck: Deck): DeckView {
   stage.className = "mn-stage";
 
   const slides = deck.slides.map((slide) => {
-    const element = renderSlide(slide);
+    const element = renderSlide(slide, bindings);
     // 生成時点では全て非表示にしておく。表示するのは showSlide() だけの責務にして、
     // DOM へ挿入した瞬間に全スライドが並ぶ状態を作らない
     element.hidden = true;

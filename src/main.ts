@@ -12,4 +12,4 @@ if (!mount) {
   throw new Error("[menma] マウント先 #app が見つかりません。");
 }
 
-startApp(mount, window);
+void startApp(mount, window);
