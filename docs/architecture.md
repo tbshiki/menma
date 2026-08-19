@@ -119,6 +119,7 @@ src/
 │
 ├── view/                      # DOM 層
 │   ├── home.ts                # 入口画面（ファイル選択・貼り付け・サンプル）
+│   ├── presentation.ts        # 発表画面の組み立てと後始末（14.2）
 │   ├── renderDeck.ts          # Deck → DOM
 │   ├── renderSlide.ts
 │   ├── cssValue.ts            # 原稿由来の値を CSS へ渡す前の検査
@@ -134,6 +135,7 @@ src/
 │
 ├── styles/
 │   ├── reset.css
+│   ├── home.css               # 入口画面
 │   ├── deck.css               # 構造
 │   ├── layouts.css            # レイアウト別
 │   ├── print.css
@@ -410,6 +412,8 @@ function startPresentation(deck: Deck, mount: HTMLElement): () => void;
 - 発表画面に「戻る」ボタンは置かない（[D-19](./decisions.md)）
 
 `connectHash` はスライド表示中だけ有効にする。入口画面では解除しておき、ハッシュの正規化が走らないようにする。
+
+ハッシュを正規形（`#/N`）に保つ仕組みが、結果として**ハッシュへ余計な情報を残せない**ようにもしている。パラメータを付け足しても次の正規化で消えるため、原稿が URL に残るとしたらクエリ側（`?`）になる。E2E はそちらを見る。
 
 ### 14.4 読み込みの失敗
 

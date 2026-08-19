@@ -1,0 +1,114 @@
+/*
+ * 入口画面。発表画面（16:9 の固定キャンバス）とは別物で、
+ * こちらは普通の Web ページとして読める組み方にする。
+ */
+
+.mn-home {
+  max-width: 44rem;
+  margin-inline: auto;
+  padding: 3rem 1.5rem 4rem;
+  color: #14181d;
+  font-family: system-ui, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  line-height: 1.7;
+}
+
+.mn-home__title {
+  margin: 0;
+  font-size: 2.5rem;
+  line-height: 1.2;
+}
+
+.mn-home__lead {
+  margin: 0.5rem 0 2rem;
+  color: #5b6570;
+}
+
+.mn-home__section {
+  margin-block: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #d8dee4;
+}
+
+.mn-home__heading {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.mn-home__description {
+  margin: 0.25rem 0 0.75rem;
+  color: #5b6570;
+  font-size: 0.9375rem;
+}
+
+.mn-home__drop {
+  padding: 1.5rem;
+  border: 2px dashed #d8dee4;
+  border-radius: 8px;
+  background: #fbfcfd;
+  text-align: center;
+}
+
+.mn-home__drop[data-active="true"] {
+  border-color: #1d5fa8;
+  background: #eef4fb;
+}
+
+.mn-home__file {
+  max-width: 100%;
+}
+
+.mn-home__textarea {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d8dee4;
+  border-radius: 8px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.mn-home__button {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid #1d5fa8;
+  border-radius: 8px;
+  background: #1d5fa8;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.9375rem;
+}
+
+.mn-home__button:hover {
+  background: #17508e;
+}
+
+.mn-home__link {
+  margin-inline-start: 1rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #5b6570;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-decoration: underline;
+}
+
+.mn-home__error {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-inline-start: 4px solid #b3261e;
+  background: #fdf3f2;
+  color: #8c1d18;
+}
+
+.mn-home__error[hidden] {
+  display: none;
+}
+
+.mn-home__note {
+  margin-top: 2.5rem;
+  color: #5b6570;
+  font-size: 0.8125rem;
+}
