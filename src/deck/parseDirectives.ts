@@ -30,6 +30,8 @@ const ASIDE_DIRECTIVE = /^@aside\s*$/;
 const NOTES_DIRECTIVE = /^@notes\s*$/;
 
 const CLASS_NAME = /^[A-Za-z0-9_-]+$/;
+/** 構造クラスと衝突させないため、内部で使う接頭辞は原稿から指定できない */
+const RESERVED_CLASS_PREFIX = "mn-";
 const ATTRIBUTE_NAMES = ["layout", "class", "background", "backgroundColor", "foreground"] as const;
 
 export function parseDirectives(slide: RawSlide): DirectiveResult {
@@ -169,15 +171,25 @@ function parseAttributes(rest: string, line: number, warnings: DeckWarning[]): A
       }
       case "class": {
         for (const className of value.split(/\s+/).filter((item) => item !== "")) {
-          if (CLASS_NAME.test(className)) {
-            result.classes.push(className);
-          } else {
+          if (!CLASS_NAME.test(className)) {
             warnings.push({
               kind: "invalid-type",
               message: `class に使えるのは英数字とハイフン、アンダースコアだけです（無視した指定: ${className}）。`,
               line,
             });
+            continue;
           }
+
+          if (className.startsWith(RESERVED_CLASS_PREFIX)) {
+            warnings.push({
+              kind: "invalid-type",
+              message: `${RESERVED_CLASS_PREFIX} で始まるクラス名は menma が使うため指定できません（無視した指定: ${className}）。`,
+              line,
+            });
+            continue;
+          }
+
+          result.classes.push(className);
         }
         break;
       }

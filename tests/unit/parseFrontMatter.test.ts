@@ -71,6 +71,12 @@ describe("parseFrontMatter", () => {
     expect(result.meta.author).toBe("田中");
   });
 
+  it("空白を挟まない # は値の一部として扱う", () => {
+    const result = parseFrontMatter(["---", "title: C# 入門 # 補足", "---", "本文"].join("\n"));
+
+    expect(result.meta.title).toBe("C# 入門");
+  });
+
   it("コメント行と空行を無視する", () => {
     const result = parseFrontMatter(
       ["---", "# コメント", "", "lang: en", "---", "本文"].join("\n"),
@@ -80,17 +86,48 @@ describe("parseFrontMatter", () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it("key: value の形式でない行を警告する", () => {
-    const result = parseFrontMatter(["---", "これは設定ではない", "---", "本文"].join("\n"));
+  it("Front Matter の中にある key: value でない行を警告する", () => {
+    const result = parseFrontMatter(
+      ["---", "title: あり", "これは設定ではない", "---", "本文"].join("\n"),
+    );
 
+    expect(result.meta.title).toBe("あり");
     expect(result.warnings[0]?.kind).toBe("invalid-type");
-    expect(result.warnings[0]?.line).toBe(2);
+    expect(result.warnings[0]?.line).toBe(3);
   });
 
   it("閉じられていない Front Matter は DeckError を投げる", () => {
     expect(() => parseFrontMatter(["---", "title: 未完", "", "# 本文"].join("\n"))).toThrow(
       DeckError,
     );
+  });
+
+  it("設定を含まない先頭の --- は Front Matter として扱わない", () => {
+    const source = ["---", "", "# 1 枚目", "", "---", "", "# 2 枚目"].join("\n");
+    const result = parseFrontMatter(source);
+
+    expect(result.body).toBe(source);
+    expect(result.bodyStartLine).toBe(1);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("設定を含まず閉じてもいない先頭の --- でもエラーにしない", () => {
+    const source = ["---", "", "# 1 枚目のみ"].join("\n");
+
+    expect(parseFrontMatter(source).body).toBe(source);
+  });
+
+  it("見出しに見える行だけでは Front Matter と認めない", () => {
+    const source = ["---", "# 見出し: 副題", "---", "", "# 本文"].join("\n");
+
+    expect(parseFrontMatter(source).body).toBe(source);
+  });
+
+  it("既定値のオブジェクトを書き換えない", () => {
+    const result = parseFrontMatter(["---", "title: 変更", "---", "本文"].join("\n"));
+
+    expect(result.meta.title).toBe("変更");
+    expect(DEFAULT_DECK_META.title).toBe("menma");
   });
 
   it("値に含まれるコロンを保持する", () => {

@@ -59,6 +59,15 @@ describe("parseDeck", () => {
     expect(deck.slides[0]?.asideHtml).toContain("右の内容");
   });
 
+  it("原稿を --- から書き始めても 1 枚目を失わない", () => {
+    const deck = parseDeck(["---", "", "# 1 枚目", "", "---", "", "# 2 枚目"].join("\n"));
+
+    expect(deck.slides.map((slide) => slide.html.trim())).toEqual([
+      "<h1>1 枚目</h1>",
+      "<h1>2 枚目</h1>",
+    ]);
+  });
+
   it("スライドが 1 枚も無ければ DeckError を投げる", () => {
     expect(() => parseDeck("---\ntitle: 空\n---\n\n\n")).toThrow(DeckError);
   });

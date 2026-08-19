@@ -14,6 +14,7 @@ const SEPARATOR = /^ {0,3}-{3,}\s*$/;
 export function splitSlides(body: string, bodyStartLine: number): RawSlide[] {
   const lines = body.split("\n");
   const fence = new FenceTracker();
+  const inFence = lines.map((line) => fence.read(line));
 
   const chunks: { lines: string[]; startLine: number }[] = [];
   let current: string[] = [];
@@ -21,9 +22,13 @@ export function splitSlides(body: string, bodyStartLine: number): RawSlide[] {
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
-    const inFence = fence.read(line);
     const previous = index > 0 ? (lines[index - 1] ?? "") : "";
-    const isSeparator = !inFence && SEPARATOR.test(line) && (index === 0 || previous.trim() === "");
+    // 直前がコードフェンスの終了行なら、その次の `---` は見出しにならないので区切りとして扱う
+    const afterFence = index > 0 && (inFence[index - 1] ?? false);
+    const isSeparator =
+      !(inFence[index] ?? false) &&
+      SEPARATOR.test(line) &&
+      (index === 0 || previous.trim() === "" || afterFence);
 
     if (isSeparator) {
       chunks.push({ lines: current, startLine: currentStartLine });

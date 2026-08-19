@@ -35,11 +35,26 @@ export function parseFrontMatter(source: string): FrontMatterResult {
   const meta: DeckMeta = { ...DEFAULT_DECK_META };
   const warnings: DeckWarning[] = [];
 
+  const withoutFrontMatter: FrontMatterResult = {
+    meta,
+    body: source,
+    bodyStartLine: 1,
+    warnings,
+  };
+
   if (lines.length === 0 || !DELIMITER.test(lines[0] ?? "")) {
-    return { meta, body: source, bodyStartLine: 1, warnings };
+    return withoutFrontMatter;
   }
 
   const closingIndex = lines.findIndex((line, index) => index > 0 && DELIMITER.test(line));
+  const contentEnd = closingIndex === -1 ? lines.length : closingIndex;
+  const entries = lines.slice(1, contentEnd).map((line) => parseEntry(line));
+
+  // 設定が 1 つも無い `---` は Front Matter ではなく、スライドの区切りとして書かれたもの。
+  // 原稿を `---` で書き始めても 1 枚目が失われないようにする（記法仕様 3.2）。
+  if (!entries.some((entry) => entry !== "skip" && entry !== "invalid")) {
+    return withoutFrontMatter;
+  }
 
   if (closingIndex === -1) {
     throw new DeckError("Front Matter が --- で閉じられていません。", {
@@ -48,13 +63,11 @@ export function parseFrontMatter(source: string): FrontMatterResult {
     });
   }
 
-  for (let index = 1; index < closingIndex; index += 1) {
-    const line = lines[index] ?? "";
-    const lineNumber = index + 1;
-    const entry = parseEntry(line);
+  entries.forEach((entry, offset) => {
+    const lineNumber = offset + 2;
 
     if (entry === "skip") {
-      continue;
+      return;
     }
 
     if (entry === "invalid") {
@@ -63,11 +76,11 @@ export function parseFrontMatter(source: string): FrontMatterResult {
         message: `Front Matter の ${lineNumber} 行目を解釈できません。key: value の形式で書いてください。`,
         line: lineNumber,
       });
-      continue;
+      return;
     }
 
     applyEntry(meta, entry, lineNumber, warnings);
-  }
+  });
 
   return {
     meta,
@@ -119,7 +132,8 @@ function normalizeValue(raw: string): string {
       continue;
     }
 
-    if (char === "#") {
+    // コメントと認めるのは空白の直後の # だけ。`title: C# 入門` の # を落とさないため
+    if (char === "#" && (index === 0 || /\s/.test(raw[index - 1] ?? ""))) {
       end = index;
       break;
     }

@@ -104,6 +104,7 @@ M2 と M3 の間に**実際の発表で 1 回使う**ゲートを置く（6 章�
 - [ ] `navigation/fullscreen.ts`（FR-17、非対応環境のフォールバック）
 - [ ] デフォルトテーマ `themes/default.css`（FR-11、CSS 変数のみ）
 - [ ] 8 レイアウトの `layouts.css`（FR-08）
+- [ ] `@slide` の `background` / `backgroundColor` / `foreground` の適用。値は `element.style.setProperty()` で CSS 変数として渡し、HTML 文字列や CSS テキストへ連結しない（NFR-07）
 - [ ] 画像・コードブロック・表・引用のスタイル（FR-04、FR-10）
 - [ ] HUD の減光・`showControls` / `showPageNumber` 対応（FR-18）
 - [ ] E2E シナリオ 9（リサイズ）

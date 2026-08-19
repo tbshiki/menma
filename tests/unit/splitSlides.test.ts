@@ -40,6 +40,14 @@ describe("splitSlides", () => {
     expect(slides).toHaveLength(1);
   });
 
+  it("コードフェンスの終了直後の --- は区切りとして扱う", () => {
+    const body = ["```ts", "const a = 1;", "```", "---", "# 次"].join("\n");
+    const slides = splitSlides(body, 1);
+
+    expect(slides).toHaveLength(2);
+    expect(slides[1]?.source).toBe("# 次");
+  });
+
   it("*** と ___ では分割しない", () => {
     const slides = splitSlides(["# 1 枚目", "", "***", "", "___", "", "続き"].join("\n"), 1);
 

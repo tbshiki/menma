@@ -65,6 +65,13 @@ describe("parseDirectives", () => {
     expect(result.warnings[0]?.kind).toBe("invalid-type");
   });
 
+  it("mn- で始まるクラス名を拒否する", () => {
+    const result = parseDirectives(slide('@slide class="intro mn-slide"\n\n本文'));
+
+    expect(result.classes).toEqual(["intro"]);
+    expect(result.warnings[0]?.kind).toBe("invalid-type");
+  });
+
   it("@aside で本文を主要部と補助部へ分ける", () => {
     const result = parseDirectives(
       slide(["@slide layout=split", "", "# 左", "", "@aside", "", "![図](./a.png)"].join("\n")),

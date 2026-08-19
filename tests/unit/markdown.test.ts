@@ -20,6 +20,31 @@ describe("createMarkdownRenderer", () => {
     expect(html).toContain("&lt;script&gt;");
   });
 
+  it("危険なスキームをリンクにしない（NFR-07）", () => {
+    for (const source of [
+      "[x](javascript:alert(1))",
+      "[x](JaVaScRiPt:alert(1))",
+      "![x](javascript:alert(1))",
+      "[x](vbscript:msgbox(1))",
+      "[x](data:text/html;base64,PHNjcmlwdD4=)",
+    ]) {
+      const html = render(source);
+
+      expect(html).not.toMatch(/href="\s*javascript:/i);
+      expect(html).not.toMatch(/src="\s*javascript:/i);
+      expect(html).not.toMatch(/href="\s*vbscript:/i);
+      expect(html).not.toMatch(/href="\s*data:text\/html/i);
+    }
+  });
+
+  it("イベントハンドラ付きの生タグをエスケープして無害化する", () => {
+    const html = render("<img src=x onerror=alert(1)>");
+
+    // 文字列としては残るが、タグとしては出力されない
+    expect(html).not.toMatch(/<img/i);
+    expect(html).toContain("&lt;img");
+  });
+
   it("外部リンクを別タブで開き、rel を付ける（FR-20）", () => {
     const html = render("[例](https://example.com)");
 

@@ -71,7 +71,8 @@ export type RawSlide = {
   startLine: number;
 };
 
-export const DEFAULT_DECK_META: DeckMeta = {
+/** 既定値そのものを書き換えられないよう凍結する。利用側は展開してコピーを作る */
+export const DEFAULT_DECK_META: Readonly<DeckMeta> = Object.freeze({
   title: "menma",
   author: "",
   lang: "ja",
@@ -81,4 +82,4 @@ export const DEFAULT_DECK_META: DeckMeta = {
   showControls: true,
   transition: "none",
   externalLinksNewTab: true,
-};
+});
