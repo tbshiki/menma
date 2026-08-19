@@ -18,6 +18,16 @@ export const SLIDE_LAYOUTS = [
 
 export type SlideLayout = (typeof SLIDE_LAYOUTS)[number];
 
+/**
+ * 用意してあるテーマ。`styles/themes/<名前>.css` と 1 対 1 で対応する。
+ *
+ * ここに無い名前を通すと、テーマの CSS 変数がどれも定義されないまま描画され、
+ * 背景も文字も既定値のない状態（黒地に黒）になって読めなくなる。
+ */
+export const THEMES = ["default"] as const;
+
+export type Theme = (typeof THEMES)[number];
+
 export type DeckMeta = {
   title: string;
   author: string;
@@ -45,7 +55,12 @@ export type Slide = {
 };
 
 export type DeckWarningKind =
-  "unknown-key" | "unknown-layout" | "unknown-attribute" | "invalid-type" | "duplicate-directive";
+  | "unknown-key"
+  | "unknown-theme"
+  | "unknown-layout"
+  | "unknown-attribute"
+  | "invalid-type"
+  | "duplicate-directive";
 
 export type DeckWarning = {
   kind: DeckWarningKind;

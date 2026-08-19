@@ -274,6 +274,28 @@ test.describe("表示", () => {
     await expect(nextButton).toBeDisabled();
   });
 
+  test("ボタンをクリックしたあともキーで操作を続けられる", async ({ page }) => {
+    // ボタンにフォーカスが残ると、入力要素と見なされてキー操作が効かなくなる（FR-14）
+    await page.getByRole("button", { name: "次のスライド" }).click();
+    expect(await currentPage(page)).toBe(2);
+
+    await page.keyboard.press("ArrowRight");
+    expect(await currentPage(page)).toBe(3);
+
+    await page.keyboard.press("ArrowLeft");
+    expect(await currentPage(page)).toBe(2);
+  });
+
+  test("HUD が本文のクリックを遮らない", async ({ page }) => {
+    // HUD はスライドの上に重なる。ボタン以外は操作を透過させる
+    const hud = page.locator(".mn-hud");
+    await expect(hud).toHaveCSS("pointer-events", "none");
+    await expect(page.getByRole("button", { name: "次のスライド" })).toHaveCSS(
+      "pointer-events",
+      "auto",
+    );
+  });
+
   test("全画面ボタンに読み上げ用の名前がある", async ({ page }) => {
     await expect(page.getByRole("button", { name: "全画面表示" })).toBeVisible();
   });

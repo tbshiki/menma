@@ -66,7 +66,7 @@ showPageNumber: true
 | `title` | string | `menma` | HTML の `<title>` |
 | `author` | string | `""` | 作者名（メタ情報としてのみ利用） |
 | `lang` | string | `ja` | `<html lang>` |
-| `theme` | string | `default` | テーマ名。MVP は `default` のみ |
+| `theme` | string | `default` | テーマ名。MVP は `default` のみ。未対応の名前は `default` へフォールバックし警告する |
 | `aspectRatio` | string | `16/9` | 基準比率。MVP は `16/9` のみ |
 | `showPageNumber` | boolean | `true` | ページ番号の表示 |
 | `showControls` | boolean | `true` | 操作 UI の表示 |
@@ -188,6 +188,7 @@ MVP の Front Matter は**フラットな `key: value` のみ**を解釈する�
 | Front Matter が閉じていない | エラー画面 + 行番号 | エラー画面（利用者向け文言） |
 | Front Matter の型不一致 | 警告 + 既定値へフォールバック | 既定値へフォールバック（無言） |
 | 未知の Front Matter キー | 警告 + 無視 | 無視（無言） |
+| 未知の `theme` | 警告 + `default` | `default`（無言） |
 | 未知の `layout` | 警告 + `default` | `default`（無言） |
 | 未知の `@slide` 属性 | 警告 + 無視 | 無視（無言） |
 | 未知のディレクティブ（`@xxx`） | 警告 + 本文として描画 | 本文として描画 |

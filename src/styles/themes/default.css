@@ -8,6 +8,7 @@
 
 .mn-deck[data-theme="default"] {
   /* 色 */
+  --mn-page-bg: #0b0d10; /* キャンバスの外側（レターボックス） */
   --mn-bg: #ffffff;
   --mn-fg: #14181d;
   --mn-muted: #5b6570;

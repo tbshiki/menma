@@ -1,5 +1,5 @@
 import { DeckError } from "./errors";
-import { DEFAULT_DECK_META, type DeckMeta, type DeckWarning } from "./types";
+import { DEFAULT_DECK_META, THEMES, type DeckMeta, type DeckWarning } from "./types";
 
 /**
  * Front Matter の解析（記法仕様 3 章）。
@@ -18,7 +18,7 @@ export type FrontMatterResult = {
 
 const DELIMITER = /^---\s*$/;
 
-const STRING_KEYS = ["title", "author", "lang", "theme"] as const;
+const STRING_KEYS = ["title", "author", "lang"] as const;
 const BOOLEAN_KEYS = ["showPageNumber", "showControls", "externalLinksNewTab"] as const;
 /** 取りうる値が決まっているキー。MVP ではどちらも 1 種類しか受け付けない */
 const ENUM_KEYS = {
@@ -157,6 +157,21 @@ function applyEntry(meta: DeckMeta, entry: Entry, line: number, warnings: DeckWa
 
   if (isStringKey(key)) {
     meta[key] = value;
+    return;
+  }
+
+  // テーマ名は用意してある CSS と対応している必要がある。
+  // 知らない名前をそのまま通すと、変数が 1 つも定義されず読めない画面になる
+  if (key === "theme") {
+    if (!(THEMES as readonly string[]).includes(value)) {
+      warnings.push({
+        kind: "unknown-theme",
+        message: `theme=${value} は用意されていません（使えるのは ${THEMES.join(" / ")}）。default で表示します。`,
+        line,
+      });
+      return;
+    }
+    meta.theme = value;
     return;
   }
 

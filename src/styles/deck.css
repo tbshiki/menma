@@ -6,9 +6,11 @@
 .mn-deck {
   display: grid;
   overflow: hidden;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
-  background: var(--mn-page-bg, #000);
+  /* dvh はモバイルのアドレスバー伸縮に追従する。対応していない環境では上の 100vh が残る */
+  height: 100dvh;
+  background: var(--mn-page-bg);
   color: var(--mn-fg);
   font-family: var(--mn-font-sans);
   place-items: center;
@@ -164,6 +166,8 @@
   gap: 12px;
   /* 発表の邪魔をしない。触れたときだけはっきり見せる */
   opacity: 0.25;
+  /* 本文の上に重なるので、操作を受けるのはボタンだけにする */
+  pointer-events: none;
   transition: opacity 0.2s ease-out;
 }
 
@@ -204,6 +208,7 @@
   cursor: pointer;
   font-size: 1.1em;
   line-height: 1;
+  pointer-events: auto;
 }
 
 .mn-hud__button:disabled {

@@ -52,6 +52,22 @@ describe("parseFrontMatter", () => {
     expect(result.warnings[0]?.kind).toBe("invalid-type");
   });
 
+  it("用意されているテーマを受け付ける", () => {
+    const result = parseFrontMatter(["---", "theme: default", "---", "本文"].join("\n"));
+
+    expect(result.meta.theme).toBe("default");
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("用意されていないテーマは default へフォールバックして警告する", () => {
+    // 通してしまうと、テーマの CSS 変数が 1 つも定義されず読めない画面になる
+    const result = parseFrontMatter(["---", "theme: dark", "---", "本文"].join("\n"));
+
+    expect(result.meta.theme).toBe("default");
+    expect(result.warnings[0]?.kind).toBe("unknown-theme");
+    expect(result.warnings[0]?.line).toBe(2);
+  });
+
   it("未知のキーは無視して警告する", () => {
     const result = parseFrontMatter(["---", "unknownKey: 1", "---", "本文"].join("\n"));
 

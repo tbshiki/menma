@@ -78,6 +78,7 @@ export type Slide = {
 export type DeckWarning = {
   kind:
     | "unknown-key"
+    | "unknown-theme"
     | "unknown-layout"
     | "unknown-attribute"
     | "invalid-type"

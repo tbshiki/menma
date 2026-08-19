@@ -76,6 +76,16 @@ function createButton(label: string, glyph: string, onClick: () => void): HTMLBu
   // 記号だけのボタンなので、読み上げ用の名前を必ず付ける（FR-22）
   button.setAttribute("aria-label", label);
   button.textContent = glyph;
-  button.addEventListener("click", onClick);
+
+  button.addEventListener("click", (event) => {
+    // ポインタ操作ではフォーカスを残さない。ボタンにフォーカスが残ると
+    // 以降キーでページを送れなくなる（FR-14 が button を入力要素として扱うため）。
+    // キーボードで押した場合（detail === 0）は、フォーカスの居場所を奪わない
+    if (event.detail > 0) {
+      button.blur();
+    }
+    onClick();
+  });
+
   return button;
 }
