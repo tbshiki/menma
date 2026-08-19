@@ -37,14 +37,14 @@ M2 と M3 の間に**実際の発表で 1 回使う**ゲートを置く（6 章�
 
 タスク
 
-- [ ] pnpm で Vite + TypeScript プロジェクトを初期化する（`strict: true`）
-- [ ] `index.html` / `src/main.ts` / `src/styles/reset.css` を作る
-- [ ] `slides.md` を `?raw` インポートして本文をそのまま画面へ表示する（FR-01）
-- [ ] Vitest を導入し、ダミーテスト 1 本を通す
-- [ ] ESLint（flat config・typescript-eslint）と Prettier を導入する
-- [ ] `package.json` に `dev` / `build` / `preview` / `typecheck` / `lint` / `format:check` / `test` を定義する
-- [ ] `.gitignore` へ `node_modules/` `dist/` を追加する（既存の記述を確認してから）
-- [ ] `skills/qa/SKILL.md` の表へ実在するコマンドを追記する
+- [x] pnpm で Vite + TypeScript プロジェクトを初期化する（`strict: true`）
+- [x] `index.html` / `src/main.ts` / `src/styles/reset.css` を作る
+- [x] `slides.md` を `?raw` インポートして本文をそのまま画面へ表示する（FR-01）
+- [x] Vitest を導入し、`utils/clamp.ts` の単体テストを通す（テスト土台の疎通確認を兼ねる）
+- [x] ESLint（flat config・typescript-eslint）と Prettier を導入する
+- [x] `package.json` に `dev` / `build` / `preview` / `typecheck` / `lint` / `format:check` / `test` を定義する
+- [x] `.gitignore` へ `node_modules/` `dist/` を追加する（既存の記述で充足済み。Vite / Playwright の出力も定義済み）
+- [x] `skills/qa/SKILL.md` の表へ実在するコマンドを追記する
 
 完了条件
 

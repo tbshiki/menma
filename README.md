@@ -22,7 +22,22 @@ Markdown を書いてブラウザでそのまま発表できる、軽量な Web 
 
 ## 現在の状態
 
-**実装前（M0 着手前）です。** 現時点でこのリポジトリにあるのは、ドキュメントと AI 開発基盤だけです。`package.json` はまだありません。次の作業は [ロードマップ M0](docs/roadmap.md#2-m0--プロジェクト基盤) です。
+**[M0 プロジェクト基盤](docs/roadmap.md#2-m0--プロジェクト基盤) まで完了。** ビルドと検証の土台があり、`slides.md` を読み込んで画面へ表示するところまで動きます。Markdown の解析とスライド表示はこれからです（次は [M1 パーサ](docs/roadmap.md#3-m1--パーサ)）。
+
+```bash
+pnpm install
+pnpm dev
+```
+
+| コマンド | 内容 |
+| --- | --- |
+| `pnpm dev` | 開発サーバ |
+| `pnpm build` | 本番ビルド（`dist/`） |
+| `pnpm preview` | ビルド結果の確認 |
+| `pnpm typecheck` | 型検査 |
+| `pnpm lint` | ESLint |
+| `pnpm format:check` | Prettier のチェック（コードのみ） |
+| `pnpm test` | 単体テスト（Vitest） |
 
 ## AI 開発基盤
 

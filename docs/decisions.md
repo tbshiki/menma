@@ -65,6 +65,18 @@ MVP はパーサ標準のコードブロック出力をそのまま使い、CSS 
 
 理由: いずれも開発時依存のみで成果物に含まれない。CI の構成（NFR-09）をこの 5 コマンドで固定する。
 
+### D-07a TypeScript は 6 系に固定する（TypeScript 7 を使わない）
+
+`typescript@^6.0.3` を使う。
+
+理由: M0 で `typescript@7.0.2` を入れたところ、`tsc --noEmit` は通るが **typescript-eslint 8 が TS 7 の API を未サポート**で ESLint が起動しない（[typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)）。lint は CI の必須項目（NFR-09）であり、型検査だけ最新にして静的解析を失うのは割に合わない。typescript-eslint が TS 7 へ対応した時点で追随する。
+
+### D-07b Prettier の対象はコードのみ。Markdown と設定ファイルは整形しない
+
+`.prettierignore` で `*.md`、`.claude/`、`*.code-workspace` を除外する。
+
+理由: ドキュメントは人が読む単位で改行や表を整えており、Prettier の再整形は意味の無い差分を大量に生む。`AGENTS.md` や `.claude/` は AI のガードレールで、整形ツールの都合で書き換える対象ではない。整形の対象を `*.ts` / `*.js` / `*.css` / `*.html` / `*.json`（`.claude/` を除く）に絞る。
+
 ### D-08 MVP は全スライドの DOM を生成し `hidden` で切り替える
 
 理由: 実装が単純で、印刷（1 ページ 1 スライド）と将来の一覧表示にそのまま使える。数百枚規模の仮想化は必要になってから。`renderDeck.ts` を独立モジュールに保つことで差し替え可能にしておく。

@@ -1,0 +1,11 @@
+dist/
+node_modules/
+coverage/
+pnpm-lock.yaml
+
+# ドキュメントは人が読む単位で改行を整えている。整形ツールで書き換えない（D-07b）
+*.md
+
+# AI のガードレールとエディタ設定は整形対象にしない（D-07b）
+.claude/
+*.code-workspace
