@@ -13,7 +13,7 @@
 
 ### マイルストーン共通の完了手順
 
-1. `pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm build` が通る（M0 以降）
+1. `pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm build` が通る（M0 以降）。E2E がある変更では `pnpm test:e2e` も通す（M2 以降）
 2. 新しく使えるようになった検証コマンドを `skills/qa/SKILL.md` の表へ追記する
 3. 仕様変更があれば `docs/` を更新し、決定は `docs/decisions.md` へ追記する
 4. 変更点・実施した検証・検証できなかった項目を報告する
@@ -26,12 +26,12 @@
 | --- | --- | --- | --- | --- |
 | M0 | プロジェクト基盤 | ビルドと検証の土台を作る | NFR-01, NFR-09 | 完了 |
 | M1 | パーサ | Markdown を Deck モデルへ変換する | FR-01〜FR-07 | 完了 |
-| M2 | 発表コア | 実際の LT で最低限使える状態にする | FR-13〜FR-16, FR-18 | **次はここ** |
-| M3 | 表示品質 | 会場のプロジェクタで安定して見せられる | FR-08〜FR-11, FR-17 | 未着手 |
+| M2 | 発表コア | 実際の LT で最低限使える状態にする | FR-13〜FR-16, FR-18 | 完了 |
+| M3 | 表示品質 | 会場のプロジェクタで安定して見せられる | FR-08〜FR-11, FR-17 | **次はここ** |
 | M4 | 堅牢性と検証 | 壊れ方を設計し、CI で守る | FR-19〜FR-23, NFR-09 | 未着手 |
 | M5 | リリース準備 | 他人が使い始められる状態にする | 受け入れ条件全項目 | 未着手 |
 
-現時点で動くこと: `slides.md` を読み込み、Front Matter・スライド分割・ディレクティブ・Markdown を解釈して `Deck` を組み立てられる。画面へはパース結果の要約を出すだけで、スライドとしての描画と操作はこれから（M2）。
+現時点で動くこと: `slides.md` がスライドとして表示され、キーボードと `#/N` の URL で移動できる。見た目（16:9 スケーリング、テーマ、レイアウト）と全画面は M3 で入れる。
 
 M2 と M3 の間に**実際の発表で 1 回使う**ゲートを置く（6 章）。
 
@@ -80,13 +80,13 @@ M2 と M3 の間に**実際の発表で 1 回使う**ゲートを置く（6 章�
 
 タスク
 
-- [ ] `view/renderDeck.ts` / `renderSlide.ts`（全スライドを生成し `hidden` で切り替え）
-- [ ] `navigation/controller.ts`（`goTo()` を唯一の変更点にする）
-- [ ] `navigation/keyboard.ts`（FR-13、FR-14 の入力要素判定を含む）
-- [ ] `navigation/hash.ts`（FR-15、FR-16 の正規化、`hashchange` 対応）
-- [ ] `view/hud.ts` のページ番号表示（FR-18）
-- [ ] 最小限の構造 CSS（`deck.css`）
-- [ ] E2E の基本シナリオ 1〜8（[設計 11 章](./architecture.md#11-テスト戦略)）
+- [x] `view/renderDeck.ts` / `renderSlide.ts`（全スライドを生成し `hidden` で切り替え）
+- [x] `navigation/controller.ts`（`goTo()` を唯一の変更点にする）
+- [x] `navigation/keyboard.ts`（FR-13、FR-14 の入力要素判定を含む）
+- [x] `navigation/hash.ts`（FR-15、FR-16 の正規化、`hashchange` 対応）
+- [x] `view/hud.ts` のページ番号表示（FR-18）
+- [x] 最小限の構造 CSS（`deck.css`）
+- [x] E2E の基本シナリオ 1〜8（Playwright 導入を含む）（[設計 11 章](./architecture.md#11-テスト戦略)）
 
 完了条件
 

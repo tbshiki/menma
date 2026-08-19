@@ -1,0 +1,60 @@
+/*
+ * 構造 CSS。色・書体・余白の見た目はテーマ（M3 の themes/default.css）が受け持つ。
+ * ここには「どう並ぶか」だけを書く。
+ */
+
+.mn-deck {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+/* 16:9 の基準キャンバス。スケーリングは M3 で scaler.ts が担当する */
+.mn-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.mn-slide {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  padding: 4vmin 6vmin;
+  gap: 2vmin;
+}
+
+.mn-slide[hidden] {
+  display: none;
+}
+
+.mn-slide__main,
+.mn-slide__aside {
+  min-width: 0;
+}
+
+.mn-hud {
+  position: fixed;
+  right: 2vmin;
+  bottom: 2vmin;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.mn-hud[hidden] {
+  display: none;
+}
+
+.mn-hud__counter {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.mn-error {
+  padding: 4vmin 6vmin;
+}

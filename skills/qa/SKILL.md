@@ -17,11 +17,12 @@ description: プロジェクト固有の QA 方法が未確定なリポジトリ
 | `pnpm format:check` | 整形チェック | Prettier。対象はコードのみ（`*.md` と `.claude/` は除外） |
 | `pnpm test` | 単体テスト | Vitest。`tests/unit/**/*.test.ts` |
 | `pnpm build` | 本番ビルド | Vite。成果物は `dist/` |
+| `pnpm test:e2e` | E2E テスト | Playwright（Chromium）。`tests/e2e/**/*.spec.ts`。開発サーバは自動で起動する |
 | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-ai-config.ps1` | AI 設定のヘルスチェック | AI 設定・スキル・権限・hook・`*.ps1` の BOM を検証する |
 
 補助コマンド: `pnpm dev`（開発サーバ）、`pnpm preview`（ビルド結果の確認）、`pnpm test:watch`、`pnpm format`（自動整形）。
 
-> E2E（`pnpm test:e2e`）は `docs/roadmap.md` の M2 で Playwright を導入した時点で上の表へ追加する。**まだ存在しないので実行しない。**
+> `pnpm test:e2e` は初回にブラウザの実体が要る。未インストールなら `pnpm exec playwright install chromium` を先に実行する。
 
 **調査の結果、恒常的に使える検証手段が判明したらこの表へ追記する。** 次回以降のゼロからの再調査を避けるため。追記するのは、リポジトリに定義済みで再現性のあるコマンドだけとする。その場限りの一時コマンドは載せない。
 
