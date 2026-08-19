@@ -155,7 +155,7 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
   <div class="mn-deck" data-theme="default">
     <!-- mn-stage は 16:9 の基準キャンバス。ここへ transform: scale を当てる -->
     <div class="mn-stage">
-      <section class="mn-slide" data-layout="split">
+      <section class="mn-slide" data-layout="split" data-index="2">
         <div class="mn-slide__main">...</div>
         <div class="mn-slide__aside">...</div>
       </section>
@@ -179,7 +179,9 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
 
 - DOM は浅く保つ。テーマ CSS は DOM 構造を変更しない（要素の追加・削除をしない）
 - レイアウトの差はクラスではなく `data-layout` 属性で表す。利用者が `@slide class=...` で付けるクラスと衝突させないため
+- `data-index` は 0 始まりのスライド位置。E2E とデバッグが「いま何枚目か」を DOM から判定するための契約なので外さない
 - 操作 UI は必ず `button` 要素で実装し、アイコンのみの場合は `aria-label` を付ける（FR-22）
+- `.mn-hud` は本文の上に重なる。M2 では `pointer-events: none` で選択を妨げないようにしてあるので、M3 でボタンを足すときはボタン側だけ `pointer-events: auto` に戻す
 
 ## 5. スタイル設計
 
@@ -256,6 +258,9 @@ class NavigationController {
 - キーボード、ハッシュ、UI ボタンは**すべて `goTo()` を経由する**。経路ごとの挙動差を作らないため
 - `goTo()` は範囲外の値を clamp し、現在と同じインデックスなら何もしない（再描画もハッシュ更新もしない）
 - ハッシュ同期は `goTo()` の後段で行う。`hashchange` から入ってきた場合も同じ経路を通り、「同じ値なら何もしない」ことで無限ループを防ぐ
+- ハッシュの正規化（`#/0` や `#/abc` を `#/1` へ直す）は `goTo()` の通知に頼らず、ハッシュを読んだ直後に必ず行う。位置が変わらない不正値では通知が起きないため、通知任せだと URL だけ古い表記で残る
+- 履歴の積み方は起点で変える。操作（キーや UI）で移動したときは履歴へ積み、ハッシュ側から来た変更（初期表示・戻る／進む・アドレスバー編集）は `replaceState` で置き換える。不正値を履歴に残すと、戻るたびに正規化が繰り返されて前へ戻れなくなる
+- 初期同期は購読の登録より**前**に行う。`subscribe()` は登録時に現在状態を 1 度渡すため、順序を逆にすると URL のページ指定を読む前に `#/1` で上書きしてしまう
 - 全画面は Progressive Enhancement。`document.fullscreenEnabled` が false ならボタンを出さず、キーも無視する
 
 ## 7. 描画方式

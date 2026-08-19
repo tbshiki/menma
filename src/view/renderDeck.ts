@@ -22,16 +22,37 @@ export function renderDeck(deck: Deck): DeckView {
   const stage = document.createElement("div");
   stage.className = "mn-stage";
 
-  const slides = deck.slides.map((slide) => renderSlide(slide));
-  stage.append(...slides);
+  const slides = deck.slides.map((slide) => {
+    const element = renderSlide(slide);
+    // 生成時点では全て非表示にしておく。表示するのは showSlide() だけの責務にして、
+    // DOM へ挿入した瞬間に全スライドが並ぶ状態を作らない
+    element.hidden = true;
+    return element;
+  });
+
+  // 1 枚ずつ挿入せず、まとめて 1 回で足す
+  const fragment = document.createDocumentFragment();
+  fragment.append(...slides);
+  stage.append(fragment);
   root.append(stage);
+
+  let visible: HTMLElement | undefined;
 
   return {
     root,
     showSlide(index: number): void {
-      slides.forEach((element, position) => {
-        element.hidden = position !== index;
-      });
+      const next = slides[index];
+
+      // 切り替えは 2 枚だけ触る。スライド数が増えても移動のコストを一定に保つ
+      if (!next || next === visible) {
+        return;
+      }
+
+      if (visible) {
+        visible.hidden = true;
+      }
+      next.hidden = false;
+      visible = next;
     },
   };
 }

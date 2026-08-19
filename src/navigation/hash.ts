@@ -42,26 +42,54 @@ export function formatHash(index: number): string {
  * 無限ループは「同じ値なら何もしない」で防ぐ。`goTo()` は同じ位置なら通知せず、
  * ハッシュも現在と同じ文字列なら書き換えない。
  *
+ * 履歴の積み方は変更の起点で分ける。
+ * - 操作（キーや UI）で移動したとき: 履歴へ積む。ブラウザの戻る／進むで辿れるようにするため
+ * - ハッシュ側から来たとき（初期表示、戻る／進む、アドレスバー編集）: 置き換える。
+ *   `#/0` のような不正値を履歴に残すと、戻るたびに正規化が繰り返されて前へ戻れなくなる
+ *
  * @returns 購読を解除する関数
  */
 export function connectHash(controller: NavigationController, target: Window): () => void {
-  const applyHash = (): void => {
-    controller.goTo(parseHash(target.location.hash, controller.state.total));
+  /** ハッシュ側から来た変更を処理している間だけ true */
+  let applyingHash = false;
+
+  const replaceHash = (next: string): void => {
+    if (target.location.hash === next) {
+      return;
+    }
+    const { pathname, search } = target.location;
+    target.history.replaceState(null, "", `${pathname}${search}${next}`);
   };
 
-  // 初期位置はハッシュから決める。履歴を増やさないよう replaceState で正規化する
+  const applyHash = (): void => {
+    applyingHash = true;
+    try {
+      controller.goTo(parseHash(target.location.hash, controller.state.total));
+      // 位置が変わらない不正値（`#/0` や `#/abc`）もここで正規形へ直す。
+      // controller の通知だけに任せると、同じ位置のときに URL が古いまま残る
+      replaceHash(formatHash(controller.state.current));
+    } finally {
+      applyingHash = false;
+    }
+  };
+
+  // 購読より先に初期位置を決める。`subscribe()` は登録時に現在状態を 1 度渡すため、
+  // 順序を逆にすると URL のページ指定を読む前に `#/1` で上書きしてしまう
   applyHash();
-  const normalized = formatHash(controller.state.current);
-  if (target.location.hash !== normalized) {
-    const { pathname, search } = target.location;
-    target.history.replaceState(null, "", `${pathname}${search}${normalized}`);
-  }
 
   const unsubscribe = controller.subscribe((state) => {
     const next = formatHash(state.current);
-    if (target.location.hash !== next) {
-      target.location.hash = next;
+
+    if (target.location.hash === next) {
+      return;
     }
+
+    if (applyingHash) {
+      replaceHash(next);
+      return;
+    }
+
+    target.location.hash = next;
   });
 
   target.addEventListener("hashchange", applyHash);
