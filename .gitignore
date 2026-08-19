@@ -1,0 +1,61 @@
+# OS / editor local files
+.DS_Store
+Thumbs.db
+*.local
+
+# Personal AI settings (never share with the repository)
+/CLAUDE.local.md
+/.claude/settings.local.json
+
+# Dependencies and common generated output
+node_modules/
+vendor/
+dist/
+build/
+coverage/
+log/
+*.log
+
+# Secrets and credentials
+# Keep this list in sync with .claude/settings.json (permissions.deny) and
+# .claude/hooks/deny-secret-file-access.ps1. A gap in one of the three means
+# the file is protected only on some paths.
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets.*
+!secrets.example
+!secrets.example.*
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+.aws/credentials
+.git-credentials
+# Registry auth files usually carry tokens. Delete these two lines if the
+# project needs to commit registry settings without credentials.
+.npmrc
+.pypirc
+
+# Generated AI skill links (recreate with scripts/sync-ai-symlinks.ps1)
+/.agents/skills
+/.claude/skills
+
+# Vite / TypeScript build cache
+.vite/
+*.tsbuildinfo
+
+# Playwright output
+/playwright-report/
+/blob-report/
+/test-results/
+/playwright/.cache/
