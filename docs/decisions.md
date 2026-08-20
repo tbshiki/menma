@@ -268,6 +268,25 @@ GitHub の `tbshiki/menma` を public にする（Q-04 の確定）。あわせ�
 
 **`wrangler.jsonc` の `account_id` は公開したまま残す。** Account ID は API トークンと違い、それ自体では何も操作できない識別子で、デプロイ先をファイルで固定できる利点（D-17）のほうが大きい。
 
+### D-25 配信時のセキュリティヘッダは `public/_headers` で付ける
+
+`public/_headers` を置き、CSP を中心としたレスポンスヘッダを全パスへ付ける。設計 12 章の方針（raw HTML 無効、外部 CDN を読み込まない）は**実装がそのとおりに書かれている限り**成り立つ話で、ブラウザ側の強制力がない。ヘッダを付ければ、実装を間違えたときにブラウザが止める側の防御が加わる。
+
+**`_headers` を選ぶ理由。** Cloudflare Workers の静的アセットは `_headers` をネイティブに対応しており（[Headers](https://developers.cloudflare.com/workers/static-assets/headers/)）、Vite の `public/` へ置けばビルドで `dist/` へ複製される。Worker スクリプト（`main`）を持たない構成（D-17）を崩さずに済み、依存も増えない。ダッシュボードの Transform Rules でも同じことはできるが、ファイルで管理できないので採らない。
+
+**CSP は仕様に合わせて緩める箇所がある。**
+
+| ディレクティブ | 値 | 理由 |
+| --- | --- | --- |
+| `script-src` / `style-src` | `'self'` | ビルド成果物は外部ファイル参照のみで、インラインの `<script>` も `<style>` も出ない。`'unsafe-inline'` は不要 |
+| `img-src` | `'self' data: blob: https:` | 記法仕様 9 章で `https://` の絶対 URL 画像をそのまま読み込むと決めている。取り込んだ画像は blob URL になる（D-20） |
+| `connect-src` | `'self'` | 実装に `fetch` も `XMLHttpRequest` も無い。外部への送信経路を塞ぐ |
+| `frame-ancestors` | `'none'` | 他サイトへの埋め込みは要件に無い。必要になったら緩める |
+
+**色や背景画像の指定は CSP に引っかからない。** 利用者の指定は `style.setProperty()`（CSSOM）で当てており、HTML の `style` 属性やインライン `<style>` を生成しない（設計 12 章）。CSP が禁じるのは後者なので、`style-src 'self'` のままで機能を落とさない。
+
+**HSTS もここで付ける。** Cloudflare のダッシュボード（SSL/TLS → Edge Certificates）でも設定できるが、ゾーン全体に効いてしまう。このホストの設定はこのリポジトリで完結させる。`preload` は付けない（登録すると取り消しに時間がかかるため、必要になってから判断する）。
+
 ## 未決事項
 
 実装は止めないが、[M7 リリース準備](./roadmap.md#10-m7--リリース準備)までに確定する。**AI が勝手に確定せず、確認する。**

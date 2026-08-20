@@ -123,6 +123,28 @@ GitHub 連携と手動デプロイは同じ Worker へ向く。手動で上げ�
 
 **プレビュー URL を有効にしている間は、それも公開される。** 非本番ブランチの内容が `<プレビュー名>-menma.<アカウントのサブドメイン>.workers.dev` で誰でも開ける状態になる（本番のカスタムドメインとは別に workers.dev 側で配信される）。有効にしている期間は、本番へマージする前でも、ブランチへ push した時点で公開されると考えて原稿を扱う。
 
+### 5.4 セキュリティヘッダ
+
+CSP などのレスポンスヘッダは `public/_headers` で定義する（[D-25](./decisions.md)）。Vite が `public/` の中身を `dist/` へ複製し、Cloudflare がそれを読んで全パスへ適用する。**ヘッダを変えるときはこのファイルだけを直す。** ダッシュボードの Transform Rules 側では設定しない（二重管理になるため）。
+
+`_headers` は Cloudflare が解釈するファイルで、`vite preview` では効かない。**確認には `wrangler dev` を使う。**
+
+```powershell
+# 1. ビルドしてローカルで Workers として配信する
+pnpm build
+npx wrangler dev
+
+# 2. 別のシェルからヘッダを見る
+curl.exe -sSI http://localhost:8787/
+```
+
+CSP を変えたときは、少なくとも次を実機で確認する。ブラウザの DevTools の Console に CSP 違反が出ていないことも見る。
+
+- 入口画面から原稿と画像を読み込んで表示できる（`blob:` の画像が出る）
+- `https://` の絶対 URL を指した画像が表示される（記法仕様 9 章）
+- `@slide background=...` の背景画像が出る
+- 全画面表示と印刷プレビューが動く
+
 ## 6. 生成物
 
 `node_modules/`、`dist/`、`.vite/`、Playwright の出力は生成物。直接編集せず、入力を直して再生成する。すべて `.gitignore` 済み。

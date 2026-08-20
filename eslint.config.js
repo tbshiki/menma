@@ -4,7 +4,9 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**", "docs/archive/**"],
+    // `.wrangler/` は wrangler dev が作る作業ディレクトリ。生成された中間ファイルを
+    // 検査すると、ローカルで配信を確認したあとに lint が落ちる（開発環境 5.4）。
+    ignores: ["dist/**", "node_modules/**", "coverage/**", "docs/archive/**", ".wrangler/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

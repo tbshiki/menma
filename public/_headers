@@ -1,0 +1,10 @@
+# 配信時のセキュリティヘッダ（docs/decisions.md の D-25）。
+# Cloudflare Workers の静的アセットが解釈する。vite preview では効かないので、
+# 確認は `pnpm build` のあと `npx wrangler dev` で行う。
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains

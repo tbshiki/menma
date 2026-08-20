@@ -370,6 +370,7 @@ Visual Regression Test は v1.1。対象は cover / default / center / split / c
 - URL クエリ・ハッシュから HTML を生成しない
 - 外部 CDN、外部フォント、外部スクリプトを読み込まない
 - 将来リモート Markdown へ対応する場合は sanitize 層を追加してから
+- 配信時に CSP などのセキュリティヘッダを付ける。定義は `public/_headers`（[D-25](./decisions.md)）。上の方針をブラウザ側からも強制するための二重化で、実装の書き間違いを検出できる
 
 ## 13. リポジトリ構成（目標）
 
