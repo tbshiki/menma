@@ -12,8 +12,9 @@ Vite + TypeScript + markdown-it + CSS で実装している（パッケージマ
 
 ## ドキュメント
 
+- [原稿の書き方](docs/writing-slides.md) — スライドの `.md` をどう書くか（AI へ渡す用の要約つき）
 - [docs/](docs/) — 全文書の索引と読み分け
 - [要件定義](docs/requirements.md) — 何を作り、何を作らないか
-- [記法仕様](docs/spec-markdown.md) — 原稿の書き方
+- [記法仕様](docs/spec-markdown.md) — 記法の正典（実装向け）
 - [ロードマップ](docs/roadmap.md) — マイルストーンと開発状況
 - [開発環境](docs/development.md) — セットアップとコマンド
