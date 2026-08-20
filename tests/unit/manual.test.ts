@@ -76,4 +76,24 @@ describe("マニュアルがデッキとして成立する", () => {
 
     expect(tooLong).toEqual([]);
   });
+
+  describe("スライドとして配信されても壊れないリンク（D-26）", () => {
+    // 本文（コードフェンスの外）だけを見る。フェンスの中は記法の説明例で、リンクではない
+    const body = deck.slides.map((slide) => slide.html).join("\n");
+    const hrefs = [...body.matchAll(/href="([^"]+)"/g)].map(([, href]) => href ?? "");
+
+    it("リンクがある", () => {
+      expect(hrefs.length).toBeGreaterThan(0);
+    });
+
+    // 配信時の現在地は menma のドメインで、GitHub ではない
+    it("文書への相対リンクを含まない", () => {
+      expect(hrefs.filter((href) => href.endsWith(".md") && !href.startsWith("http"))).toEqual([]);
+    });
+
+    // menma はハッシュをページ番号に使う。アンカーを踏むと 1 枚目へ丸められる（FR-16）
+    it("ページ内アンカーを含まない", () => {
+      expect(hrefs.filter((href) => href.startsWith("#"))).toEqual([]);
+    });
+  });
 });

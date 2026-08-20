@@ -17,8 +17,8 @@ Markdown ファイル 1 枚が、そのままスライドになる。
 
 利用者向けのガイド。**この文書自身が menma の原稿**で、入口画面から「マニュアルを見る」で開ける。
 
-- 記法の正典は[記法仕様](./spec-markdown.md)。食い違ったら記法仕様が正しい
-- **AI に原稿を書かせるときは記法仕様のほうを渡す**（[AI に書かせる](#ai-に書かせるとき)）
+- 記法の正典は[記法仕様](https://github.com/tbshiki/menma/blob/main/docs/spec-markdown.md)。食い違ったら記法仕様が正しい
+- **AI に原稿を書かせるときは記法仕様のほうを渡す**（最後のほうで説明する）
 - 記法が変わったら、記法仕様とこの文書の両方を直す
 
 ---
@@ -430,10 +430,8 @@ URL を渡せない相手には、記法仕様の本文をそのまま貼り付�
 
 ---
 
-@slide layout=center
-
 # 関連する文書
 
-- [記法仕様](./spec-markdown.md) — 記法の正典。細かい判定規則とエラー時の挙動
-- [要件定義](./requirements.md) — 何ができて何をしないか
-- [開発環境](./development.md) — 自分でビルドして公開するとき
+- [記法仕様](https://github.com/tbshiki/menma/blob/main/docs/spec-markdown.md) — 記法の正典。細かい判定規則とエラー時の挙動
+- [要件定義](https://github.com/tbshiki/menma/blob/main/docs/requirements.md) — 何ができて何をしないか
+- [開発環境](https://github.com/tbshiki/menma/blob/main/docs/development.md) — 自分でビルドして公開するとき
