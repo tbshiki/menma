@@ -162,7 +162,7 @@ Codex と Claude Code の両方で使う共通基盤を導入している。構�
 | `.claude/skills` | Claude Code のスキル探索場所。`../skills` への生成 symlink |
 | `.claude/settings.json` | Claude Code の権限。読み取り中心で、commit / push は確認対象 |
 | `.claude/hooks/` | 実行時のガードレール（秘密情報のアクセス拒否、追跡済みファイルの自動許可） |
-| `scripts/` | symlink 同期とヘルスチェック |
+| `scripts/` | symlink 同期、ヘルスチェック、Dropbox コピー |
 
 ### 7.1 Windows 専用
 
@@ -193,3 +193,41 @@ AI 設定を変更したら `scripts/check-ai-config.ps1` を実行する。正�
 ### 7.5 ファイルエンコーディング
 
 `*.ps1` は **UTF-8 BOM 付き・CRLF**、通常のテキストは UTF-8・LF で保存する。Windows PowerShell 5.1 は BOM なし UTF-8 をレガシーコードページとして読むため、日本語を含むスクリプトは BOM がないと壊れる。`.editorconfig` と `.gitattributes` に規則を定義しているが、AI やツールの書き込みには適用されないため、ヘルスチェックで機械的に検証している。
+
+## 8. ワークスペースを Dropbox へコピーする
+
+別端末や共有相手へワークスペースをそのまま渡すための、`robocopy.exe` を使ったコピー。**世代管理バックアップではない。**
+
+コピー先は実行時に導出するため、設定ファイルへ端末固有の絶対パスを残さない。
+
+- コピー元は Documents 配下のワークスペースに限る。配下にない場合はコピーせず、理由と対処を示して終了コード 1 で止まる。
+- Documents からの相対パスを、そのまま Dropbox 配下へ再現する。
+
+```text
+<Documents>\<相対パス>  ->  <Dropbox>\<相対パス>
+```
+
+Documents は既知フォルダー設定（OneDrive などへのリダイレクトを含む）と `%USERPROFILE%\Documents` の両方を候補にする。Dropbox は `%USERPROFILE%\Dropbox` を優先し、無ければ Dropbox クライアントの `info.json` から実際の同期先を探す。
+
+VS Code では `Ctrl+Shift+B`（Tasks: Run Build Task）から選ぶ。どちらも入力を求めない。
+
+| タスク | 動作 |
+| --- | --- |
+| `Dropbox: Copy workspace (overwrite)` | 上書きコピー。`/MIR` を使わないため、コピー先だけにあるファイルは残る |
+| `Dropbox: Copy workspace (clean)` | コピー先フォルダを削除してからコピーする |
+
+PowerShell から直接実行することもできる。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\copy-workspace-to-dropbox.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\copy-workspace-to-dropbox.ps1 -Clean
+
+# Dropbox を自動検出できないときだけルートを明示する
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\copy-workspace-to-dropbox.ps1 -DestinationRoot "D:\Dropbox"
+```
+
+`clean` はコピー先フォルダ内の既存ファイルをすべて消すため、実行時に表示される `Destination:` を確認する。Dropbox ルート自体、ルート外のパス、コピー元と親子関係にあるパス、symlink、junction は削除しない。
+
+`node_modules/`、`dist/`、キャッシュ、ログ、一時ファイル、`.wrangler/` は再生成できるためコピー対象外。生成 symlink の `.agents/skills` と `.claude/skills` もコピーせず、コピー先で `scripts/sync-ai-symlinks.ps1` を実行して作り直す。
+
+**受け渡し用のコピーなので、`.git` と Git 管理外の秘密情報（環境変数ファイル、鍵、ローカル設定）も含めてコピーする。** 共有先でそのまま作業を再開できることを優先しているため。Dropbox の共有範囲とアクセス権を確認し、信頼できる相手とだけ共有する。

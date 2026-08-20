@@ -47,6 +47,53 @@
         "panel": "dedicated",
         "clear": true
       }
+    },
+    {
+      "label": "Dropbox: Copy workspace (overwrite)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\scripts\\copy-workspace-to-dropbox.ps1"
+      ],
+      "windows": {
+        "command": "powershell.exe"
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Dropbox: Copy workspace (clean)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\scripts\\copy-workspace-to-dropbox.ps1",
+        "-Clean"
+      ],
+      "windows": {
+        "command": "powershell.exe"
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
     }
   ]
 }
