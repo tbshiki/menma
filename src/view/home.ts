@@ -155,6 +155,10 @@ export function createHome(options: HomeOptions): HomeView {
       clearMessages();
       options.onSource({ kind: "sample" });
     }, options.onClearStored),
+    createManualSection(() => {
+      clearMessages();
+      options.onSource({ kind: "manual" });
+    }, cleanups),
     createAppearanceSection(options),
     note,
   );
@@ -292,6 +296,89 @@ function createSampleSection(onSample: () => void, onClearStored: (() => void) |
     section.append(clear);
   }
 
+  return section;
+}
+
+/**
+ * AI へ渡す記法仕様の URL（FR-39、D-26）。
+ *
+ * 正典そのものを渡すため、ガイドではなく `spec-markdown.md` を指す。配信を自前で持たず
+ * GitHub の raw を使うので、`main` の内容と常に一致する。
+ */
+const SPEC_RAW_URL = "https://raw.githubusercontent.com/tbshiki/menma/main/docs/spec-markdown.md";
+
+function createManualSection(onManual: () => void, cleanups: (() => void)[]) {
+  const section = createSection(
+    "書き方を読む",
+    "menma の記法をひととおり。マニュアル自身が menma の原稿になっています。",
+  );
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "mn-home__button";
+  button.textContent = "マニュアルを見る";
+  button.addEventListener("click", onManual);
+
+  const forAi = document.createElement("p");
+  forAi.className = "mn-home__description";
+  forAi.textContent = "AI に原稿を書かせるときは、記法仕様の URL を渡してください。";
+
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "mn-home__link";
+  copy.textContent = "AI 用のリンクをコピー";
+
+  // コピーできない環境（権限拒否、古いブラウザ）でも URL を読み取れるようにしておく。
+  // ここが唯一の受け渡し手段になるため、ボタンの成否に関係なく見えている必要がある
+  const url = document.createElement("code");
+  url.className = "mn-home__url";
+  url.textContent = SPEC_RAW_URL;
+
+  const status = document.createElement("span");
+  status.className = "mn-home__status";
+  // 読み上げは `aria-live` で足りる。`role="status"` は取り込みの知らせ（warning）が
+  // 使っており、入口画面に 2 つ置くと「どちらの知らせか」が指せなくなる
+  status.setAttribute("aria-live", "polite");
+
+  let timer: number | undefined;
+  const notify = (message: string): void => {
+    status.textContent = message;
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+    }
+    timer = window.setTimeout(() => {
+      status.textContent = "";
+      timer = undefined;
+    }, 3000);
+  };
+
+  copy.addEventListener("click", () => {
+    // クリップボードは安全なコンテキスト（https / localhost）でしか使えない。
+    // 使えない場合も URL は下に出ているので、伝えるだけにする
+    const clipboard = navigator.clipboard as Clipboard | undefined;
+
+    if (!clipboard) {
+      notify("この環境ではコピーできません。下の URL を選んでコピーしてください。");
+      return;
+    }
+
+    void clipboard
+      .writeText(SPEC_RAW_URL)
+      .then(() => {
+        notify("コピーしました。");
+      })
+      .catch(() => {
+        notify("コピーできませんでした。下の URL を選んでコピーしてください。");
+      });
+  });
+
+  cleanups.push(() => {
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+    }
+  });
+
+  section.append(button, forAi, copy, status, url);
   return section;
 }
 

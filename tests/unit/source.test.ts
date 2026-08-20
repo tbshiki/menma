@@ -43,17 +43,22 @@ describe("isSupportedImageName", () => {
 });
 
 describe("readSourceText / sourceAssets", () => {
-  it("サンプルは同梱の本文を使い、画像を持たない", () => {
-    const sample: DeckSource = { kind: "sample" };
+  const bundled = { sample: "サンプル本文", manual: "マニュアル本文" };
 
-    expect(readSourceText(sample, "サンプル本文")).toBe("サンプル本文");
-    expect(sourceAssets(sample)).toEqual([]);
+  it.each([
+    ["sample", "サンプル本文"],
+    ["manual", "マニュアル本文"],
+  ] as const)("%s は同梱の本文を使い、画像を持たない", (kind, text) => {
+    const source: DeckSource = { kind };
+
+    expect(readSourceText(source, bundled)).toBe(text);
+    expect(sourceAssets(source)).toEqual([]);
   });
 
   it("ファイルと貼り付けは自分の本文と画像を使う", () => {
     const asset = { name: "a.png", blob: new Blob(["x"]) };
 
-    expect(readSourceText({ kind: "file", name: "a.md", text: "A", assets: [] }, "サンプル")).toBe(
+    expect(readSourceText({ kind: "file", name: "a.md", text: "A", assets: [] }, bundled)).toBe(
       "A",
     );
     expect(sourceAssets({ kind: "text", text: "B", assets: [asset] })).toEqual([asset]);
@@ -65,6 +70,7 @@ describe("toStoredDeckSource", () => {
     const asset = { name: "a.png", blob: new Blob(["x"]) };
     const sources: DeckSource[] = [
       { kind: "sample" },
+      { kind: "manual" },
       { kind: "text", text: "# 貼り付け", assets: [] },
       { kind: "file", name: "talk.md", text: "# ファイル", assets: [asset] },
     ];

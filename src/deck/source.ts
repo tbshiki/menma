@@ -33,9 +33,17 @@ export type DeckAsset = {
   blob: Blob;
 };
 
+/** 本文を同梱している取得元。保存するのは種類だけで足りる */
+export const BUNDLED_KINDS = ["sample", "manual"] as const;
+
+export type BundledKind = (typeof BUNDLED_KINDS)[number];
+
+/** 同梱の原稿。サンプルと書き方のマニュアル（D-26） */
+export type BundledText = Readonly<Record<BundledKind, string>>;
+
 export type DeckSource =
-  /** 同梱のサンプル。本文も画像も持たない（バンドル済みのものを使う） */
-  | { kind: "sample" }
+  /** 同梱のサンプルとマニュアル。本文も画像も持たない（バンドル済みのものを使う） */
+  | { kind: BundledKind }
   | { kind: "file"; name: string; text: string; assets: readonly DeckAsset[] }
   | { kind: "text"; text: string; assets: readonly DeckAsset[] };
 
@@ -52,14 +60,19 @@ export function isSupportedImageName(name: string): boolean {
   return hasExtension(name, SUPPORTED_IMAGE_EXTENSIONS);
 }
 
-/** 取得元が持つ画像。サンプルは画像を持たない */
-export function sourceAssets(source: DeckSource): readonly DeckAsset[] {
-  return source.kind === "sample" ? [] : source.assets;
+/** 同梱の原稿かどうか。本文を持たない取得元を 1 か所で判定する */
+export function isBundled(source: DeckSource): source is { kind: BundledKind } {
+  return (BUNDLED_KINDS as readonly string[]).includes(source.kind);
 }
 
-/** 取得元から原稿本文を取り出す。サンプルだけは同梱の本文を使う */
-export function readSourceText(source: DeckSource, sampleText: string): string {
-  return source.kind === "sample" ? sampleText : source.text;
+/** 取得元が持つ画像。同梱の原稿は画像を持たない */
+export function sourceAssets(source: DeckSource): readonly DeckAsset[] {
+  return isBundled(source) ? [] : source.assets;
+}
+
+/** 取得元から原稿本文を取り出す。同梱の原稿だけはバンドル済みの本文を使う */
+export function readSourceText(source: DeckSource, bundled: BundledText): string {
+  return isBundled(source) ? bundled[source.kind] : source.text;
 }
 
 /**
@@ -79,8 +92,10 @@ export function toStoredDeckSource(value: unknown): DeckSource | undefined {
     return undefined;
   }
 
-  if (source["kind"] === "sample") {
-    return { kind: "sample" };
+  const kind = source["kind"];
+
+  if (typeof kind === "string" && (BUNDLED_KINDS as readonly string[]).includes(kind)) {
+    return { kind: kind as BundledKind };
   }
 
   const text = source["text"];

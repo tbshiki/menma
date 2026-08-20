@@ -186,3 +186,27 @@ test("保存した原稿を消すと次回は入口から始まる", async ({ pa
   await expect(page.locator(home)).toBeVisible();
   await expect(page.getByRole("button", { name: "前回の原稿を開く" })).toHaveCount(0);
 });
+
+test("マニュアルを開くとスライドになる（FR-38）", async ({ page }) => {
+  await page.getByRole("button", { name: "マニュアルを見る" }).click();
+
+  await expect(page.locator(home)).toHaveCount(0);
+  await expect(page.locator(visibleSlide)).toHaveCount(1);
+  await expect(page.locator(visibleSlide)).toContainText("menma で原稿を書く");
+  // 文書ではなくデッキとして開けていること
+  await expect(page.locator(".mn-slide").first()).toHaveAttribute("data-layout", "cover");
+  await expect(page.locator(".mn-slide")).not.toHaveCount(1);
+});
+
+test("AI へ渡す記法仕様のリンクをコピーできる（FR-39）", async ({ page, context }) => {
+  const url = "https://raw.githubusercontent.com/tbshiki/menma/main/docs/spec-markdown.md";
+
+  // コピーできない環境でも受け渡せるように、URL は常に読める形で出ている
+  await expect(page.getByText(url)).toBeVisible();
+
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.getByRole("button", { name: "AI 用のリンクをコピー" }).click();
+
+  await expect(page.getByText("コピーしました。")).toBeVisible();
+  await expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
+});

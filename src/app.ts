@@ -1,14 +1,18 @@
+import manualText from "../docs/writing-slides.md?raw";
 import sampleText from "../slides.md?raw";
 
 import { DeckError } from "./deck/errors";
 import { parseDeck } from "./deck/parseDeck";
-import { readSourceText, sourceAssets, type DeckSource } from "./deck/source";
+import { readSourceText, sourceAssets, type BundledText, type DeckSource } from "./deck/source";
 import { loadAppearance, saveAppearance, type Appearance } from "./storage/appearance";
 import { clearSource, loadSource, saveSource } from "./storage/deckStore";
 import type { Deck } from "./deck/types";
 import { createAssetBindings, findMissingAssets, type AssetBindings } from "./view/assets";
 import { createHome, type HomeView } from "./view/home";
 import { startPresentation } from "./view/presentation";
+
+/** 同梱の原稿。取得に失敗する経路を作らないため、どちらもバンドルへ入れる（D-26） */
+const bundled: BundledText = { sample: sampleText, manual: manualText };
 
 /**
  * 画面の切り替え（設計 14 章）。
@@ -86,7 +90,7 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
     let deck: Deck;
 
     try {
-      deck = parseDeck(readSourceText(next, sampleText));
+      deck = parseDeck(readSourceText(next, bundled));
     } catch (error) {
       showHome();
       home?.showError(
@@ -161,7 +165,7 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
     }
 
     try {
-      showPresentation(parseDeck(readSourceText(source, sampleText)), source);
+      showPresentation(parseDeck(readSourceText(source, bundled)), source);
     } catch {
       showHome();
       home?.showError("保存されていた原稿を読み込めませんでした。");

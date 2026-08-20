@@ -408,11 +408,12 @@ AI 開発基盤（`AGENTS.md` / `CLAUDE.md` / `skills/` / `scripts/` / `.claude/
 ```ts
 export type DeckSource =
   | { kind: "sample" }
+  | { kind: "manual" }
   | { kind: "file"; name: string; text: string }
   | { kind: "text"; text: string };
 ```
 
-`sample` は本文を持たない。バンドル済みの `slides.md` を使うため、保存する必要がないため。
+`sample` と `manual` は本文を持たない。バンドル済みの `slides.md` と `docs/writing-slides.md` を使うため、保存する必要がないため（`manual` は [D-26](./decisions.md)）。
 
 保存は `localStorage` の 1 キー（`menma:source`）へ、形式の版を付けて置く。
 

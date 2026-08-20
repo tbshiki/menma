@@ -210,6 +210,7 @@ M4 と同じく MVP の受け入れ条件には含まれないが、利用者の
 - [x] LICENSE を追加する（MIT。[D-24](./decisions.md) で Q-01 / Q-04 を確定し、リポジトリを公開する方針にした）
 - [x] デプロイ手順を用意する（Cloudflare Workers。[開発環境 5 章](./development.md#5-デプロイcloudflare-workers)。ゲートの評価を公開 URL で行うため前倒しで実施）
 - [x] 公開に向けてリポジトリと配信を固める（[D-24](./decisions.md) で public 化、[D-25](./decisions.md) で配信時のセキュリティヘッダ。GitHub 側の保護設定もあわせて有効化した。ロードマップ外の作業だったが、公開の判断に伴って必要になったため実施）
+- [x] 入口画面からマニュアルを開けるようにする（FR-38 / FR-39。`docs/writing-slides.md` を menma 記法へ書き直し、AI へは記法仕様の raw URL を渡す。[D-26](./decisions.md)）
 - [ ] サブディレクトリ配信での画像パスを確認する。原稿の `/assets/...` はベースパスを見ないため、`MENMA_BASE` を設定した配信では解決できない（`import.meta.env.BASE_URL` を使って原稿のパスを解決するか、相対パスの扱いを決める）
 - [ ] [MVP 受け入れ条件](./requirements.md#9-mvp-受け入れ条件) 14 項目を 1 つずつ確認する
 - [ ] v1.0 としてタグを打つ（ユーザーの明示的な依頼を受けてから）
