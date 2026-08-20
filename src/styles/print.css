@@ -1,0 +1,78 @@
+/*
+ * 印刷と PDF 出力（FR-12、設計 5.3、D-23）。
+ *
+ * PDF はブラウザの印刷ダイアログの「PDF に保存」で出す。生成ライブラリは持たない。
+ * ここは画面用の仕掛け（拡縮・1 枚だけ表示・操作 UI）を解いて、
+ * 全スライドを 1 枚 1 ページで並べ直すことだけを行う。
+ */
+
+@media print {
+  /*
+   * ページを基準キャンバスと同じ大きさにする。用紙サイズへ縮めると、
+   * テーマの px 値と実際の見え方の対応が崩れる。紙に出すときはブラウザ側で縮小される。
+   */
+  @page {
+    size: 1600px 900px;
+    margin: 0;
+  }
+
+  html,
+  body {
+    height: auto;
+    background: #ffffff;
+  }
+
+  /* 入口画面は資料ではない */
+  .mn-home {
+    display: none;
+  }
+
+  .mn-deck {
+    display: block;
+    overflow: visible;
+    height: auto;
+    background: none;
+    place-items: start;
+  }
+
+  /* 画面へ収めるための拡縮は印刷では邪魔になる。実寸のまま流す */
+  .mn-stage {
+    position: static;
+    width: auto;
+    height: auto;
+    background: none;
+    transform: none;
+  }
+
+  /*
+   * 画面では 1 枚だけを見せるため他は hidden にしてある。印刷では全部出す。
+   * `.mn-slide[hidden]` は `[hidden]` より詳細度が高いので !important は要らない。
+   */
+  .mn-slide,
+  .mn-slide[hidden] {
+    position: static;
+    display: flex;
+    width: 1600px;
+    height: 900px;
+    /* 背景色はブラウザ既定では落ちる。スライドの地色は資料の一部なので残す */
+    print-color-adjust: exact;
+    break-after: page;
+  }
+
+  /* 最後の 1 枚で改ページすると空白ページが増える */
+  .mn-slide:last-child {
+    break-after: auto;
+  }
+
+  /* 発表用の操作は紙には要らない */
+  .mn-hud,
+  .mn-progress {
+    display: none;
+  }
+
+  /* 1 枚に収まらない中身は画面と同じく切る。ページ途中で分断しない */
+  .mn-slide__main,
+  .mn-slide__aside {
+    overflow: hidden;
+  }
+}

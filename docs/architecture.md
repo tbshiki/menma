@@ -262,6 +262,17 @@ const scale = Math.min(containerWidth / canvasWidth, containerHeight / canvasHei
 - 再計算は次フレームへまとめ、連続リサイズで描画が詰まらないようにする
 - 基準を固定することで、テーマの px 値をそのまま使え、**どの画面でも 1 枚に入る情報量が変わらない**
 
+### 5.3 印刷と PDF（FR-12）
+
+`print.css` の `@media print` だけで担う。PDF 生成ライブラリは持たない（[D-23](./decisions.md)）。
+
+- `@page { size: 1600px 900px; margin: 0 }`。ページを基準キャンバスと同じ大きさにし、余白はスライドの `padding` が持つ
+- 画面用の拡縮（`transform: scale()`）を解き、`.mn-stage` を実寸のまま流す
+- `hidden` のスライドも印刷では見せる。`.mn-slide[hidden]` は詳細度が `[hidden]` より高いので `!important` は要らない
+- 1 枚 1 ページは `break-after: page`。最後の 1 枚だけ `auto` にして空白ページを作らない
+- 操作 UI（`.mn-hud`）と進み具合のバー（`.mn-progress`）は出さない
+- 背景色は `print-color-adjust: exact` で残す。ブラウザ既定では背景が落ちる
+
 ## 6. ナビゲーション
 
 状態はこれだけ。

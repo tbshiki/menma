@@ -3,6 +3,7 @@ import "./styles/home.css";
 import "./styles/deck.css";
 import "./styles/layouts.css";
 import "./styles/themes/default.css";
+import "./styles/print.css";
 
 import { startApp } from "./app";
 
