@@ -340,18 +340,32 @@ test.describe("表示", () => {
   });
 
   test("ポインタを乗せ続けてもページ番号が「戻る」に変わる（D-22）", async ({ page }) => {
-    const counter = page.locator(".mn-hud__counter");
+    const counterLocator = page.locator(counter);
 
     const hud = page.locator(".mn-hud");
     await expect(hud).toHaveCSS("opacity", "0.2");
 
-    await counter.hover();
+    await counterLocator.hover();
 
-    // 800ms 乗せ続けると役割が変わる
-    await expect(counter).toHaveAttribute("data-armed", "true", { timeout: 3000 });
+    // 1.5 秒乗せ続けると役割が変わる
+    await expect(counterLocator).toHaveAttribute("data-armed", "true", { timeout: 4000 });
 
     // 押せる状態は狙えるだけの濃さが要る
     await expect(hud).toHaveCSS("opacity", "1");
+  });
+
+  test("ポインタが離れるとページ番号へ戻る（D-22）", async ({ page }) => {
+    const counterLocator = page.locator(counter);
+    const total = await totalPages(page);
+
+    await counterLocator.dblclick();
+    await expect(counterLocator).toHaveAttribute("data-armed", "true");
+
+    // 離れたまま残ると、戻ってきて押したときに入口へ飛んでしまう
+    await page.mouse.move(0, 0);
+
+    await expect(counterLocator).toHaveAttribute("data-armed", "false");
+    await expect(counterLocator).toHaveText(`1 / ${String(total)}`);
   });
 
   test("進み具合のバーが位置に応じて伸びる（FR-35）", async ({ page }) => {

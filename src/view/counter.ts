@@ -7,10 +7,11 @@ import type { PresentationState } from "../navigation/controller";
  * ポインタを乗せ続けるかダブルクリックすると役割が変わり、そこでクリックすると戻る。
  */
 
-/** ポインタを乗せ続けて役割が変わるまでの時間 */
-const ARM_DELAY_MS = 800;
-/** ポインタが離れてから元へ戻るまでの時間 */
-const DISARM_DELAY_MS = 2000;
+/**
+ * ポインタを乗せ続けて役割が変わるまでの時間。
+ * 送るボタンへ向かう途中で通り過ぎただけでは変わらない長さにする
+ */
+const ARM_DELAY_MS = 1500;
 
 export type Counter = {
   root: HTMLButtonElement;
@@ -27,7 +28,6 @@ export function createCounter(onExit: () => void): Counter {
   let label = "";
   let armed = false;
   let armTimer = 0;
-  let disarmTimer = 0;
 
   const render = (): void => {
     root.textContent = armed ? "原稿を選ぶ" : label;
@@ -38,15 +38,13 @@ export function createCounter(onExit: () => void): Counter {
     );
   };
 
-  const clearTimers = (): void => {
+  const clearArmTimer = (): void => {
     clearTimeout(armTimer);
-    clearTimeout(disarmTimer);
     armTimer = 0;
-    disarmTimer = 0;
   };
 
   const arm = (): void => {
-    clearTimers();
+    clearArmTimer();
     if (!armed) {
       armed = true;
       render();
@@ -54,7 +52,7 @@ export function createCounter(onExit: () => void): Counter {
   };
 
   const disarm = (): void => {
-    clearTimers();
+    clearArmTimer();
     if (armed) {
       armed = false;
       render();
@@ -62,14 +60,11 @@ export function createCounter(onExit: () => void): Counter {
   };
 
   root.addEventListener("pointerenter", () => {
-    clearTimeout(disarmTimer);
     armTimer = window.setTimeout(arm, ARM_DELAY_MS);
   });
 
-  root.addEventListener("pointerleave", () => {
-    clearTimeout(armTimer);
-    disarmTimer = window.setTimeout(disarm, DISARM_DELAY_MS);
-  });
+  // 離れたら待たずに戻す。残ったままだと、戻ってきて押したときに入口へ飛んでしまう
+  root.addEventListener("pointerleave", disarm);
 
   // ダブルクリックなら待たずに役割を変える
   root.addEventListener("dblclick", arm);
@@ -109,7 +104,7 @@ export function createCounter(onExit: () => void): Counter {
     },
 
     destroy(): void {
-      clearTimers();
+      clearArmTimer();
     },
   };
 }
