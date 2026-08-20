@@ -16,6 +16,16 @@
     "directory": "./dist",
   },
 
-  // 非本番ブランチのプレビュー URL を有効にする（Pull Request へコメントされる）
-  "preview_urls": true,
+  // 公開 URL はカスタムドメイン
+  "routes": [{ "pattern": "menma.taptoclicks.com", "custom_domain": true }],
+
+  // workers.dev のルート（menma.tbshikicom-cloudflare.workers.dev）は使わない。
+  // ダッシュボードで無効にしただけでは次の deploy で再び有効になるため、ここへ明示する
+  "workers_dev": false,
+
+  // プレビュー URL も既定では無効にする。プレビューは workers.dev 側
+  // （<プレビュー名>-menma.<サブドメイン>.workers.dev）で配信されるため、
+  // 有効にすると公開 URL がカスタムドメイン 1 つに収まらなくなる。
+  // 開発が立て込んで Pull Request で確認したい期間だけ true にして戻す
+  "preview_urls": false,
 }

@@ -64,13 +64,17 @@ $env:MENMA_BASE = "/slides/"; pnpm build
   "name": "menma",
   "account_id": "de637d9cbd121d7cb91831328696ca99", // taptoclicks.com
   "assets": { "directory": "./dist" },
-  "preview_urls": true,
+  "routes": [{ "pattern": "menma.taptoclicks.com", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
 }
 ```
 
 配信先のアカウントは **taptoclicks.com**（[D-17](./decisions.md)）。`account_id` をファイルに書いてあるので、複数アカウントへアクセスできるログインでも別のアカウントへ上げてしまうことがない。Account ID は秘密情報ではない（API トークンとは別物）。
 
-公開 URL は `menma.<アカウントのサブドメイン>.workers.dev`。
+公開 URL は **<https://menma.taptoclicks.com/>**（カスタムドメイン）。`workers.dev` のルート（`menma.tbshikicom-cloudflare.workers.dev`）は無効にしてある。
+
+**`workers_dev` はダッシュボードだけで無効にしても戻る。** ダッシュボードで無効にしても、`workers_dev: false` が Wrangler 設定に無いと[次のデプロイで再び有効になる](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/)。公開 URL を 1 つに保つため、ファイル側にも必ず書く。
 
 手元のログインがどのアカウントを向いているかは `npx wrangler whoami` で確認する。目的のアカウントが一覧に出ないときは、そのアカウントへ招待されていても既存トークンには反映されないため、`npx wrangler logout` してから `npx wrangler login` で認可をやり直す。
 
@@ -86,12 +90,14 @@ $env:MENMA_BASE = "/slides/"; pnpm build
    - ビルドコマンド: `pnpm run build`
    - デプロイコマンド: `npx wrangler deploy`（既定のまま）
    - Node のバージョン: `.node-version`（22）が読まれる
-4. Settings → Build → **非本番ブランチのビルドを有効化**する（Pull Request のプレビュー URL に必要）
+4. Settings → Build → **非本番ブランチのビルドを有効化**する（Pull Request のプレビュー URL を使うときに必要）
 5. 保存してデプロイ
 
 非本番ブランチのビルドでは、デプロイコマンドが `npx wrangler versions upload` に置き換わり、本番を差し替えずにプレビュー版だけが作られる。プレビュー URL は Pull Request へコメントされ、同じブランチへ commit を足しても URL は変わらない。
 
-**発表前の確認はプレビュー URL で行い、本番 URL は `main` の内容に保つ。**
+**既定ではプレビュー URL を無効にしてある**（`preview_urls: false`）。公開 URL をカスタムドメイン 1 つに保つため。無効の間はコメントされた URL を開いても、無効であることを説明する Cloudflare の案内ページが出る。**発表前の確認は手元の `pnpm preview` で行う。**
+
+開発が立て込んで Pull Request 上で確認したい期間だけ、`wrangler.jsonc` を `"preview_urls": true` にして push し、区切りがついたら `false` に戻す。ダッシュボードから切り替えることもできるが、**ファイル側を直さないと次のデプロイで設定が戻る**（[Preview URLs](https://developers.cloudflare.com/workers/versions-and-deployments/preview-urls/)）。有効にしている間は、ブランチへ push した内容が `<プレビュー名>-menma.<アカウントのサブドメイン>.workers.dev` で誰でも開ける状態になる。
 
 ### 5.2 wrangler から手動デプロイ
 
@@ -115,7 +121,7 @@ GitHub 連携と手動デプロイは同じ Worker へ向く。手動で上げ�
 - `dist/` をローカルで `pnpm preview` して表示を確認した
 - 原稿に公開したくない内容が含まれていない
 
-**プレビュー URL も公開される。** `preview_urls` を有効にしているため、非本番ブランチの内容も `*.workers.dev` で誰でも開ける状態になる。本番へマージする前でも、ブランチへ push した時点で公開されると考えて原稿を扱う。
+**プレビュー URL を有効にしている間は、それも公開される。** 非本番ブランチの内容が `<プレビュー名>-menma.<アカウントのサブドメイン>.workers.dev` で誰でも開ける状態になる（本番のカスタムドメインとは別に workers.dev 側で配信される）。有効にしている期間は、本番へマージする前でも、ブランチへ push した時点で公開されると考えて原稿を扱う。
 
 ## 6. 生成物
 

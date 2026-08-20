@@ -161,6 +161,14 @@ Worker スクリプト（`main`）は持たず、アセットだけを配信す�
 
 変更時点では旧アカウントに Worker が無く（GitHub 連携のプロジェクトのみ）、手動デプロイも一度も行っていなかったため、引き継ぐデプロイ履歴は無かった。
 
+**公開 URL はカスタムドメイン <https://menma.taptoclicks.com/> の 1 つに絞る。** `workers.dev` のルートは無効にし、`wrangler.jsonc` に `routes`（`custom_domain: true`）と `workers_dev: false` を書く。
+
+理由: 同じ内容が 2 つの URL で見えると、共有したリンクとブックマークが分かれ、どちらが正なのか分からなくなる。**ダッシュボードで `workers.dev` を無効にするだけでは足りない。** Wrangler 設定に `workers_dev: false` が無いと次のデプロイで再び有効になる（[Workers dev](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/)）。ダッシュボードとファイルで二重管理しないという上記の方針どおり、ファイル側を正典にする。
+
+**プレビュー URL も既定では無効にする**（`preview_urls: false`）。この決定の当初は「Pull Request にプレビュー URL が付く運用を基本にする」としていたが、公開 URL をカスタムドメイン 1 つに保つ方針と両立しないため見直した。プレビューは `workers.dev` 側（`<プレビュー名>-menma.<サブドメイン>.workers.dev`）で配信されるため、有効にすると閉じたはずの経路が開く。
+
+**代わりに、発表前の確認は手元の `pnpm preview` で行う。** 開発が立て込んで Pull Request 上での確認が要る期間だけ `preview_urls: true` にして push し、区切りがついたら戻す。ダッシュボードで切り替えてもファイル側を直さなければ次のデプロイで戻るため、切り替えは `wrangler.jsonc` で行う（[Preview URLs](https://developers.cloudflare.com/workers/versions-and-deployments/preview-urls/)）。
+
 ### D-18 バージョンは メジャー.マイナー.パッチ。1.0.0 までは記法が変わりうる
 
 `package.json` の `version` と Git タグ（`v` 始まり）で表す。
