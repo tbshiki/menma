@@ -207,7 +207,7 @@ M4 と同じく MVP の受け入れ条件には含まれないが、利用者の
 
 - [ ] README を書く（Features / Quick Start / 記法 / レイアウト / キー操作 / ビルド / デプロイ / ドキュメント / ライセンス）
 - [ ] `docs/` の記述を実装と突き合わせて更新する
-- [ ] LICENSE を追加する（[未決事項](./decisions.md#未決事項)の確定が必要）
+- [x] LICENSE を追加する（MIT。[D-24](./decisions.md) で Q-01 / Q-04 を確定し、リポジトリを公開する方針にした）
 - [x] デプロイ手順を用意する（Cloudflare Workers。[開発環境 5 章](./development.md#5-デプロイcloudflare-workers)。ゲートの評価を公開 URL で行うため前倒しで実施）
 - [ ] サブディレクトリ配信での画像パスを確認する。原稿の `/assets/...` はベースパスを見ないため、`MENMA_BASE` を設定した配信では解決できない（`import.meta.env.BASE_URL` を使って原稿のパスを解決するか、相対パスの扱いを決める）
 - [ ] [MVP 受け入れ条件](./requirements.md#9-mvp-受け入れ条件) 14 項目を 1 つずつ確認する

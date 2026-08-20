@@ -18,3 +18,7 @@ Vite + TypeScript + markdown-it + CSS で実装している（パッケージマ
 - [記法仕様](docs/spec-markdown.md) — 記法の正典（実装向け）
 - [ロードマップ](docs/roadmap.md) — マイルストーンと開発状況
 - [開発環境](docs/development.md) — セットアップとコマンド
+
+## ライセンス
+
+[MIT License](LICENSE)

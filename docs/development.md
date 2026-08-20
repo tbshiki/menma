@@ -62,21 +62,28 @@ $env:MENMA_BASE = "/slides/"; pnpm build
 ```jsonc
 {
   "name": "menma",
+  "account_id": "de637d9cbd121d7cb91831328696ca99", // taptoclicks.com
   "assets": { "directory": "./dist" },
   "preview_urls": true,
 }
 ```
 
+配信先のアカウントは **taptoclicks.com**（[D-17](./decisions.md)）。`account_id` をファイルに書いてあるので、複数アカウントへアクセスできるログインでも別のアカウントへ上げてしまうことがない。Account ID は秘密情報ではない（API トークンとは別物）。
+
 公開 URL は `menma.<アカウントのサブドメイン>.workers.dev`。
+
+手元のログインがどのアカウントを向いているかは `npx wrangler whoami` で確認する。目的のアカウントが一覧に出ないときは、そのアカウントへ招待されていても既存トークンには反映されないため、`npx wrangler logout` してから `npx wrangler login` で認可をやり直す。
 
 ### 5.1 GitHub 連携（通常の運用）
 
 `main` への push で自動デプロイされる。初回だけ Cloudflare ダッシュボードでの接続が必要。
 
+**同じリポジトリを 2 つの Cloudflare アカウントへ同時に接続しない。** GitHub 連携は Cloudflare アカウントごとに別の GitHub App インストールとして張られるため、古い接続を残したまま新しく接続すると、`main` への push で両方のアカウントへデプロイされる。接続先を変えるときは、先に旧アカウント側のプロジェクトを削除し、GitHub の Settings → Applications → Cloudflare Workers and Pages から旧アカウント向けインストールのリポジトリアクセスも外す。
+
 1. Cloudflare ダッシュボード → Workers & Pages → Create → **Import a repository**（Connect to Git）
 2. リポジトリ `tbshiki/menma` を選び、本番ブランチに `main` を指定
 3. ビルド設定
-   - ビルドコマンド: `pnpm build`
+   - ビルドコマンド: `pnpm run build`
    - デプロイコマンド: `npx wrangler deploy`（既定のまま）
    - Node のバージョン: `.node-version`（22）が読まれる
 4. Settings → Build → **非本番ブランチのビルドを有効化**する（Pull Request のプレビュー URL に必要）

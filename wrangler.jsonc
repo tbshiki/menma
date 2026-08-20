@@ -6,6 +6,11 @@
   "name": "menma",
   "compatibility_date": "2026-08-19",
 
+  // 配信先アカウント（taptoclicks.com）を固定する。書かないと「そのときログインしている
+  // アカウント」で決まるため、複数アカウントを持つログインで取り違えが起きる。
+  // Account ID は API トークンと違い秘密情報ではない
+  "account_id": "de637d9cbd121d7cb91831328696ca99",
+
   // ビルド成果物をそのまま配信する。Worker スクリプト（main）は持たない
   "assets": {
     "directory": "./dist",
