@@ -5,6 +5,7 @@ import {
   type DeckSource,
 } from "../deck/source";
 import type { Appearance } from "../storage/appearance";
+import { readDroppedHandle } from "../storage/fileAccess";
 import { describeRejected, selectFiles } from "./fileSelection";
 
 /**
@@ -12,6 +13,9 @@ import { describeRejected, selectFiles } from "./fileSelection";
  *
  * 原稿の渡し方は 3 つだけ。ここは受け取るだけで、解釈も描画もしない。
  */
+
+/** ファイル名から元ファイルへの参照を引く（設計 16.1）。取れた環境でだけ中身が入る */
+type FileHandles = ReadonlyMap<string, FileSystemFileHandle>;
 
 export type HomeOptions = {
   /**
@@ -95,7 +99,7 @@ export function createHome(options: HomeOptions): HomeView {
     warning.hidden = true;
   };
 
-  const acceptFiles = (files: readonly File[]): void => {
+  const acceptFiles = (files: readonly File[], handles?: FileHandles): void => {
     if (files.length === 0) {
       return;
     }
@@ -118,7 +122,10 @@ export function createHome(options: HomeOptions): HomeView {
 
     const markdown = selection.markdown;
 
-    void Promise.all([markdown.text(), ...selection.assets.map(toDeckAsset)])
+    void Promise.all([
+      markdown.text(),
+      ...selection.assets.map((file) => toDeckAsset(file, handles?.get(file.name))),
+    ])
       .then(([text, ...assets]) => {
         if (typeof text !== "string" || text.trim() === "") {
           showError(`${markdown.name} は空でした。`);
@@ -132,6 +139,9 @@ export function createHome(options: HomeOptions): HomeView {
             name: markdown.name,
             text,
             assets: assets as DeckAsset[],
+            // 参照が取れていれば、あとから 🔄 で読み直せる（FR-40）
+            handle: handles?.get(markdown.name),
+            lastModified: markdown.lastModified,
           },
           rejected,
         );
@@ -187,9 +197,12 @@ export function createHome(options: HomeOptions): HomeView {
   };
 }
 
-async function toDeckAsset(file: File): Promise<DeckAsset> {
+async function toDeckAsset(
+  file: File,
+  handle: FileSystemFileHandle | undefined,
+): Promise<DeckAsset> {
   // Blob のまま持つ。IndexedDB は構造化クローンで保存できる（設計 15.3）
-  return { name: file.name, blob: file.slice(0, file.size, file.type) };
+  return { name: file.name, blob: file.slice(0, file.size, file.type), handle };
 }
 
 function createResumeSection(onResume: () => void) {
@@ -205,10 +218,13 @@ function createResumeSection(onResume: () => void) {
   return section;
 }
 
-function createFileSection(onFiles: (files: readonly File[]) => void, cleanups: (() => void)[]) {
+function createFileSection(
+  onFiles: (files: readonly File[], handles?: FileHandles) => void,
+  cleanups: (() => void)[],
+) {
   const section = createSection(
     "ファイルを開く",
-    "Markdown と、原稿が使う画像をまとめて選ぶか、ここへ落としてください。",
+    "Markdown と、原稿が使う画像をまとめて選ぶか、ここへ落としてください。原稿を書き換えたら、発表画面の 🔄 で読み直せます。",
   );
 
   const input = document.createElement("input");
@@ -236,7 +252,29 @@ function createFileSection(onFiles: (files: readonly File[]) => void, cleanups: 
   const onDrop = (event: DragEvent): void => {
     event.preventDefault();
     delete drop.dataset.active;
-    onFiles([...(event.dataTransfer?.files ?? [])]);
+
+    const transfer = event.dataTransfer;
+
+    if (!transfer) {
+      return;
+    }
+
+    const files = [...transfer.files];
+    // 参照の取得はこのハンドラの中で始める。イベントを抜けると項目は無効になる（設計 16.1）
+    const pending = [...transfer.items].map(readDroppedHandle);
+
+    void Promise.all(pending).then((handles) => {
+      const found = new Map<string, FileSystemFileHandle>();
+
+      for (const handle of handles) {
+        // 同名が複数落とされたら最初の 1 つ。画像の照合（D-20）と同じ扱いにする
+        if (handle && !found.has(handle.name)) {
+          found.set(handle.name, handle);
+        }
+      }
+
+      onFiles(files, found);
+    });
   };
 
   drop.addEventListener("dragover", onDragOver);

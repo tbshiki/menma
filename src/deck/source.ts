@@ -31,6 +31,8 @@ export const SOURCE_FORMAT_VERSION = 1;
 export type DeckAsset = {
   name: string;
   blob: Blob;
+  /** 読み直し用のファイル参照。取れた環境でだけ持つ（設計 16.1） */
+  handle?: FileSystemFileHandle;
 };
 
 /** 本文を同梱している取得元。保存するのは種類だけで足りる */
@@ -41,10 +43,26 @@ export type BundledKind = (typeof BUNDLED_KINDS)[number];
 /** 同梱の原稿。サンプルと書き方のマニュアル（D-26） */
 export type BundledText = Readonly<Record<BundledKind, string>>;
 
+/**
+ * ファイルから開いた原稿。読み直しの対象になる唯一の取得元（FR-40）。
+ *
+ * `handle` と `lastModified` は読み直しのためだけに持つ。無くても原稿は開ける。
+ */
+export type FileDeckSource = {
+  kind: "file";
+  name: string;
+  text: string;
+  assets: readonly DeckAsset[];
+  /** 元ファイルへの参照。File System Access API のある環境でだけ取れる（設計 16.1） */
+  handle?: FileSystemFileHandle;
+  /** 読み込んだ時点の更新時刻。更新の有無はこれと比べて決める（FR-41） */
+  lastModified?: number;
+};
+
 export type DeckSource =
   /** 同梱のサンプルとマニュアル。本文も画像も持たない（バンドル済みのものを使う） */
   | { kind: BundledKind }
-  | { kind: "file"; name: string; text: string; assets: readonly DeckAsset[] }
+  | FileDeckSource
   | { kind: "text"; text: string; assets: readonly DeckAsset[] };
 
 export type StoredSource = {
@@ -63,6 +81,11 @@ export function isSupportedImageName(name: string): boolean {
 /** 同梱の原稿かどうか。本文を持たない取得元を 1 か所で判定する */
 export function isBundled(source: DeckSource): source is { kind: BundledKind } {
   return (BUNDLED_KINDS as readonly string[]).includes(source.kind);
+}
+
+/** 読み直せる取得元か（FR-40）。ファイルから開いたものだけが対象 */
+export function canReloadSource(source: DeckSource): source is FileDeckSource {
+  return source.kind === "file";
 }
 
 /** 取得元が持つ画像。同梱の原稿は画像を持たない */
@@ -112,10 +135,36 @@ export function toStoredDeckSource(value: unknown): DeckSource | undefined {
   const name = source["name"];
 
   if (source["kind"] === "file" && typeof name === "string") {
-    return { kind: "file", name, text, assets };
+    const lastModified = source["lastModified"];
+
+    return {
+      kind: "file",
+      name,
+      text,
+      assets,
+      handle: toFileHandle(source["handle"]),
+      lastModified: typeof lastModified === "number" ? lastModified : undefined,
+    };
   }
 
   return undefined;
+}
+
+/**
+ * 保存されていたファイル参照を受け取る（設計 16.1）。
+ *
+ * `instanceof FileSystemFileHandle` は使えない。API の無いブラウザにはその型自体が無く、
+ * 保存された値を読むだけで落ちてしまうため。`getFile` を持つかどうかだけで見る。
+ *
+ * **参照が壊れていても原稿は開ける。** 読み直しが使えなくなるだけにしたいので、
+ * ここで undefined を返しても取得元そのものは捨てない。
+ */
+function toFileHandle(value: unknown): FileSystemFileHandle | undefined {
+  if (!isRecord(value) || typeof value["getFile"] !== "function") {
+    return undefined;
+  }
+
+  return value as unknown as FileSystemFileHandle;
 }
 
 function toDeckAssets(value: unknown): DeckAsset[] | undefined {
@@ -137,7 +186,7 @@ function toDeckAssets(value: unknown): DeckAsset[] | undefined {
       return undefined;
     }
 
-    assets.push({ name, blob });
+    assets.push({ name, blob, handle: toFileHandle(item["handle"]) });
   }
 
   return assets;

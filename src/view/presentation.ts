@@ -9,15 +9,23 @@ import {
 } from "../navigation/fullscreen";
 import { connectHash } from "../navigation/hash";
 import { connectKeyboard } from "../navigation/keyboard";
-import { createHud } from "./hud";
+import { createHud, type HudOptions, type ReloadState } from "./hud";
 import { createProgress } from "./progress";
 import { renderDeck } from "./renderDeck";
 import { connectScaler } from "./scaler";
 
+/** 表示中の発表画面。差し替えと後始末はここを通す */
+export type Presentation = {
+  /** DOM と購読を捨てる（設計 14.2） */
+  stop(): void;
+  /** 読み直しの状態を操作 UI へ伝える（設計 16.5） */
+  setReload(state: ReloadState): void;
+};
+
 /**
  * 発表画面を組み立てる（設計 14.2）。
  *
- * デッキを差し替えられるよう、**後始末の関数を返す**。DOM だけでなく購読も解く。
+ * デッキを差し替えられるよう、**後始末を持つオブジェクトを返す**。DOM だけでなく購読も解く。
  * `NavigationController` は総ページ数を固定で持つため、デッキごとに作り直す。
  */
 export function startPresentation(
@@ -27,7 +35,8 @@ export function startPresentation(
   mount: HTMLElement,
   target: Window,
   onExit: () => void,
-): () => void {
+  onReload?: HudOptions["onReload"],
+): Presentation {
   const view = renderDeck(deck, bindings, appearance);
   const controller = new NavigationController(deck.slides.length);
 
@@ -50,6 +59,7 @@ export function startPresentation(
     },
     onToggleFullscreen: requestToggleFullscreen,
     onExit,
+    onReload,
   });
 
   const progress = createProgress();
@@ -80,11 +90,17 @@ export function startPresentation(
     );
   }
 
-  return () => {
-    for (const cleanup of cleanups) {
-      cleanup();
-    }
-    hud.destroy();
-    view.root.remove();
+  return {
+    stop(): void {
+      for (const cleanup of cleanups) {
+        cleanup();
+      }
+      hud.destroy();
+      view.root.remove();
+    },
+
+    setReload(state: ReloadState): void {
+      hud.setReload(state);
+    },
   };
 }

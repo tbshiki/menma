@@ -3,13 +3,20 @@ import sampleText from "../slides.md?raw";
 
 import { DeckError } from "./deck/errors";
 import { parseDeck } from "./deck/parseDeck";
-import { readSourceText, sourceAssets, type BundledText, type DeckSource } from "./deck/source";
+import {
+  canReloadSource,
+  readSourceText,
+  sourceAssets,
+  type BundledText,
+  type DeckSource,
+} from "./deck/source";
 import { loadAppearance, saveAppearance, type Appearance } from "./storage/appearance";
 import { clearSource, loadSource, saveSource } from "./storage/deckStore";
+import { hasFileUpdate, reloadFileSource } from "./storage/fileAccess";
 import type { Deck } from "./deck/types";
 import { createAssetBindings, findMissingAssets, type AssetBindings } from "./view/assets";
 import { createHome, type HomeView } from "./view/home";
-import { startPresentation } from "./view/presentation";
+import { startPresentation, type Presentation } from "./view/presentation";
 
 /** 同梱の原稿。取得に失敗する経路を作らないため、どちらもバンドルへ入れる（D-26） */
 const bundled: BundledText = { sample: sampleText, manual: manualText };
@@ -28,13 +35,15 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
   let appearance: Appearance = loadAppearance(target);
 
   let home: HomeView | undefined;
-  let stopPresentation: (() => void) | undefined;
+  let presentation: Presentation | undefined;
   let bindings: AssetBindings | undefined;
+  /** 読み直しが走っている間だけ true。二重に走らせない（設計 16.3） */
+  let reloading = false;
 
   /** 発表画面と、そこで使っていた blob URL を捨てる（設計 15.2） */
   const stop = (): void => {
-    stopPresentation?.();
-    stopPresentation = undefined;
+    presentation?.stop();
+    presentation = undefined;
     bindings?.release();
     bindings = undefined;
   };
@@ -73,7 +82,7 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
     mount.append(home.root);
   };
 
-  const showPresentation = (deck: Deck, next: DeckSource): void => {
+  const showPresentation = (deck: Deck, next: DeckSource, message?: string): void => {
     home?.destroy();
     home = undefined;
 
@@ -82,7 +91,20 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
 
     stop();
     bindings = createAssetBindings(sourceAssets(next));
-    stopPresentation = startPresentation(deck, bindings, appearance, mount, target, exitToHome);
+    presentation = startPresentation(
+      deck,
+      bindings,
+      appearance,
+      mount,
+      target,
+      exitToHome,
+      // 読み直せる取得元のときだけ 🔄 を出す（FR-40）
+      canReloadSource(next) ? requestReload : undefined,
+    );
+
+    if (message !== undefined) {
+      presentation.setReload({ status: "idle", message });
+    }
   };
 
   /** 原稿を受け取って発表へ移る。読めなければ入口へ理由を出す（FR-29） */
@@ -128,6 +150,93 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
     showPresentation(deck, next);
   };
 
+  /**
+   * 元ファイルを読み直す（FR-40、FR-42、設計 16.3）。
+   *
+   * **失敗しても表示中のデッキを捨てない。** 発表の最中に押される操作なので、
+   * 読めなかった・解釈できなかったときは理由を操作 UI へ出すだけにする。
+   */
+  const reload = async (includeAssets: boolean): Promise<void> => {
+    const current = source;
+
+    if (reloading || !current || !canReloadSource(current)) {
+      return;
+    }
+
+    reloading = true;
+    presentation?.setReload({ status: "busy" });
+
+    try {
+      const outcome = await reloadFileSource(current, { target, includeAssets });
+
+      if (outcome.status === "cancelled") {
+        presentation?.setReload({ status: "idle" });
+        return;
+      }
+
+      if (outcome.status === "failed") {
+        presentation?.setReload({ status: "idle", message: outcome.message });
+        return;
+      }
+
+      let deck: Deck;
+
+      try {
+        deck = parseDeck(outcome.source.text);
+      } catch (error) {
+        presentation?.setReload({
+          status: "idle",
+          message: error instanceof DeckError ? error.userMessage : "原稿を読み直せませんでした。",
+        });
+        return;
+      }
+
+      source = outcome.source;
+      // 参照と更新時刻も含めて保存し直す。リロードしても最新の内容で再開できる（FR-27）
+      await saveSource(target, outcome.source);
+
+      if (outcome.status === "unchanged") {
+        presentation?.setReload({ status: "idle", message: outcome.note ?? "変更はありません。" });
+        return;
+      }
+
+      // ページ位置はハッシュが持っている。作り直した controller が読み直す（設計 16.3）
+      showPresentation(deck, outcome.source, outcome.note ?? "読み直しました。");
+    } finally {
+      reloading = false;
+    }
+  };
+
+  const requestReload = (options: { includeAssets: boolean }): void => {
+    void reload(options.includeAssets);
+  };
+
+  /**
+   * 原稿が更新されていないか調べる（FR-41）。
+   *
+   * 見つけても**印を付けるだけ**で、画面は変えない（D-27）。権限も求めない。
+   */
+  const checkUpdate = (): void => {
+    const current = source;
+
+    if (!presentation || reloading || !current || !canReloadSource(current)) {
+      return;
+    }
+
+    void hasFileUpdate(current).then((updated) => {
+      // 調べている間に画面が変わっていることがある。いまの状態だけを見て決める
+      if (updated && presentation && !reloading && source === current) {
+        presentation.setReload({ status: "updated" });
+      }
+    });
+  };
+
+  const onVisibilityChange = (): void => {
+    if (target.document.visibilityState === "visible") {
+      checkUpdate();
+    }
+  };
+
   /** 未解決の画像を調べるためだけに blob URL を作り、すぐ捨てる */
   const findMissing = (deck: Deck, next: DeckSource): string[] => {
     const probe = createAssetBindings(sourceAssets(next));
@@ -160,7 +269,7 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
       return;
     }
 
-    if (stopPresentation) {
+    if (presentation) {
       return;
     }
 
@@ -174,9 +283,14 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
 
   sync();
   target.addEventListener("popstate", sync);
+  // 戻ってきたときに原稿の更新を調べる（FR-41）
+  target.addEventListener("focus", checkUpdate);
+  target.document.addEventListener("visibilitychange", onVisibilityChange);
 
   return () => {
     target.removeEventListener("popstate", sync);
+    target.removeEventListener("focus", checkUpdate);
+    target.document.removeEventListener("visibilitychange", onVisibilityChange);
     stop();
     home?.destroy();
   };

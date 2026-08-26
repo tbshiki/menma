@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   SOURCE_FORMAT_VERSION,
+  canReloadSource,
   isSupportedFileName,
   isSupportedImageName,
   readSourceText,
@@ -65,6 +66,24 @@ describe("readSourceText / sourceAssets", () => {
   });
 });
 
+describe("canReloadSource", () => {
+  it("ファイルから開いた原稿だけが読み直せる", () => {
+    expect(canReloadSource({ kind: "file", name: "a.md", text: "A", assets: [] })).toBe(true);
+  });
+
+  it("同梱の原稿と貼り付けは読み直せない", () => {
+    const sources: DeckSource[] = [
+      { kind: "sample" },
+      { kind: "manual" },
+      { kind: "text", text: "A", assets: [] },
+    ];
+
+    for (const source of sources) {
+      expect(canReloadSource(source)).toBe(false);
+    }
+  });
+});
+
 describe("toStoredDeckSource", () => {
   it("保存された取得元を読み戻せる", () => {
     const asset = { name: "a.png", blob: new Blob(["x"]) };
@@ -78,6 +97,44 @@ describe("toStoredDeckSource", () => {
     for (const source of sources) {
       expect(toStoredDeckSource(stored(source))).toEqual(source);
     }
+  });
+
+  it("ファイル参照と更新時刻も読み戻せる（設計 16.1）", () => {
+    const handle = { kind: "file", name: "talk.md", getFile: () => Promise.resolve(new Blob()) };
+    const source = {
+      kind: "file",
+      name: "talk.md",
+      text: "# ファイル",
+      assets: [{ name: "a.png", blob: new Blob(["x"]), handle }],
+      handle,
+      lastModified: 1700000000000,
+    };
+
+    const restored = toStoredDeckSource(stored(source));
+
+    expect(restored).toMatchObject({ kind: "file", lastModified: 1700000000000 });
+    expect(restored && "handle" in restored && restored.handle).toBe(handle);
+    expect(sourceAssets(restored as DeckSource)[0]?.handle).toBe(handle);
+  });
+
+  it("壊れたファイル参照は落とすが、原稿そのものは捨てない（設計 16.1）", () => {
+    const source = {
+      kind: "file",
+      name: "talk.md",
+      text: "# ファイル",
+      assets: [{ name: "a.png", blob: new Blob(["x"]), handle: { name: "a.png" } }],
+      handle: "参照ではない",
+      lastModified: "数値ではない",
+    };
+
+    const restored = toStoredDeckSource(stored(source));
+
+    expect(restored).toEqual({
+      kind: "file",
+      name: "talk.md",
+      text: "# ファイル",
+      assets: [{ name: "a.png", blob: expect.any(Blob) }],
+    });
   });
 
   it("版が違う保存は捨てる", () => {

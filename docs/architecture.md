@@ -129,7 +129,7 @@ src/
 │   ├── cssValue.ts            # 原稿由来の値を CSS へ渡す前の検査
 │   ├── colors.ts              # 色の決め方と明暗の判定（D-21）
 │   ├── progress.ts            # 進み具合のバー
-│   ├── hud.ts                 # ページ番号・操作 UI
+│   ├── hud.ts                 # ページ番号・操作 UI・読み直し（16.5）
 │   ├── errorScreen.ts
 │   └── scaler.ts              # 16:9 フィット
 │
@@ -139,8 +139,9 @@ src/
 │   ├── hash.ts
 │   └── fullscreen.ts
 │
-├── storage/                   # ブラウザへの保存。原稿は IndexedDB、設定は localStorage
-│   ├── deckStore.ts           # 原稿と画像（15.3）
+├── storage/                   # ブラウザへの保存とファイルアクセス
+│   ├── deckStore.ts           # 原稿と画像（15.3）。IndexedDB
+│   ├── fileAccess.ts          # 元ファイルの読み直し（16 章）。File System Access API
 │   └── appearance.ts          # 見た目の指定（D-21）
 │
 ├── styles/
@@ -183,6 +184,9 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
     <div class="mn-hud">
       <button type="button" class="mn-hud__counter" data-armed="false">3 / 24</button>
       <div class="mn-hud__actions">
+        <!-- ファイルから開いた原稿のときだけ出る。更新があると data-updated="true"（16.5） -->
+        <span class="mn-hud__status" aria-live="polite"></span>
+        <button type="button" class="mn-hud__button" aria-label="原稿を読み直す" data-updated="false"></button>
         <button type="button" class="mn-hud__button" aria-label="前のスライド"></button>
         <button type="button" class="mn-hud__button" aria-label="次のスライド"></button>
         <button type="button" class="mn-hud__button" aria-label="全画面表示"></button>
@@ -519,3 +523,79 @@ v0.2.0 で `localStorage` に保存された原稿は、起動時に IndexedDB �
 - 画像は `<img>` として表示する。SVG に script が含まれていても `<img>` 経由では実行されない
 - blob URL は同一オリジンに閉じる。外部へは出さない
 - 取り込んだ画像もブラウザの外へ送信しない（12 章の方針と同じ）
+
+## 16. 原稿の読み直し（v0.6.0）
+
+ファイルから開いた原稿を、発表画面のまま最新の内容へ差し替える（FR-40〜FR-42）。
+
+### 16.1 ファイルへの参照をどう持つか
+
+`File` は選んだ瞬間のスナップショットで、あとから中身を読み直せない。読み直すには `FileSystemFileHandle`（File System Access API）が要る。
+
+| 開き方 | 参照の取得 | 2 回目以降 |
+| --- | --- | --- |
+| ドラッグ&ドロップ（Chromium） | `DataTransferItem.getAsFileSystemHandle()` | 押すだけ |
+| ファイル選択（`input`） | 取れない | 最初の 🔄 で 1 度だけ選び直してもらい、そのハンドルを覚える |
+| Firefox / Safari | API が無い | 押すたびにファイル選択のダイアログ |
+
+ハンドルは `DeckSource` に持たせ、原稿・画像と一緒に IndexedDB へ保存する（構造化クローンで保存できる）。
+
+```ts
+export type DeckAsset = { name: string; blob: Blob; handle?: FileSystemFileHandle };
+
+export type DeckSource =
+  | { kind: BundledKind }
+  | {
+      kind: "file";
+      name: string;
+      text: string;
+      assets: readonly DeckAsset[];
+      handle?: FileSystemFileHandle;
+      /** 読み直しの要否を判定するための、読み込んだ時点の更新時刻 */
+      lastModified?: number;
+    }
+  | { kind: "text"; text: string; assets: readonly DeckAsset[] };
+```
+
+保存された値の検証（`toStoredDeckSource`）では、ハンドルを `getFile` を持つオブジェクトかどうかだけで見る。`instanceof` は API の無いブラウザで型そのものが存在せず使えないため。**ハンドルが壊れていても原稿は開ける**（落とすのは読み直しの機能だけ）。
+
+### 16.2 権限
+
+保存したハンドルの読み取り権限は、ページを開き直すと `prompt` に戻る。
+
+- 更新の有無を調べるとき（FR-41）は `queryPermission()` が `granted` のときだけ読む。**勝手に権限を求めない**
+- 🔄 を押したときは `requestPermission()` まで行う。操作を起点にしているので、ダイアログが出ても文脈が分かる
+- 拒否された、ハンドルが無効になった（ファイルの移動・削除）ときは、ファイル選択へ落ちる
+
+### 16.3 反映のしかた
+
+`app.ts` の `reload()` が唯一の入口。
+
+1. `storage/fileAccess.ts` が最新の本文（と、求められていれば画像）を読み、新しい `DeckSource` を作る
+2. 本文が前と同じなら再描画しない（「変更はありません」とだけ伝える）
+3. `parseDeck()` に失敗したら**表示中のデッキを保つ**。操作 UI へ理由を短く出すだけにする
+4. 成功したら保存し直し、発表画面を作り直す
+
+**ページ位置はハッシュが持っている。** 作り直した `NavigationController` は `connectHash` の初期化でハッシュを読むため、同じページのまま戻る。スライドが減っていれば D-03 の丸めで最終ページになる。
+
+### 16.4 更新の検知
+
+`focus` と `visibilitychange`（`visible`）で、ハンドルの `lastModified` を読み込み時の値と比べる。
+
+- 見つけても**自動で反映しない**（[D-27](./decisions.md)）。🔄 に印を付けるだけ
+- 監視は発表画面の生存期間に閉じる。入口画面では調べない
+- 調べている最中に再度呼ばれても二重に走らせない
+
+### 16.5 操作 UI
+
+`.mn-hud__actions` の先頭へ 🔄 を置く。ファイルから開いた原稿のときだけ出す。
+
+| 状態 | 見え方 |
+| --- | --- |
+| 通常 | 他の操作ボタンと同じ |
+| 更新あり | `data-updated="true"` で印を付ける |
+| 読み直し中 | `disabled` |
+
+- 左クリック: 原稿だけ読み直す
+- 右クリック（`contextmenu`）と `Shift` + クリック: 画像も一緒に読み直す（FR-42）。**右クリックだけだとキーボードから届かない**ため、`Shift` + クリックも同じ動作にする
+- 結果は `.mn-hud__status`（`aria-live="polite"`）へ短く出し、数秒で消す

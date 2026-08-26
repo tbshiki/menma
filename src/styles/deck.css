@@ -188,7 +188,9 @@
  */
 .mn-hud:has(:hover),
 .mn-hud:focus-within,
-.mn-hud:has(.mn-hud__counter[data-armed="true"]) {
+.mn-hud:has(.mn-hud__counter[data-armed="true"]),
+/* 読み直しの結果は読まれないと意味がないので、出ている間だけはっきり見せる */
+.mn-hud:has(.mn-hud__status:not(:empty)) {
   opacity: 1;
 }
 
@@ -258,6 +260,34 @@
 .mn-hud__button:disabled {
   cursor: default;
   opacity: 0.4;
+}
+
+/*
+ * 読み直しのボタン（FR-40）。原稿が更新されていたら右上に点を出す（FR-41）。
+ * 反映は押したときだけなので、印は「押せば新しくなる」という合図でしかない。
+ */
+.mn-hud__button[data-updated="true"] {
+  position: relative;
+  opacity: 1;
+}
+
+.mn-hud__button[data-updated="true"]::after {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mn-progress-color, var(--mn-accent));
+  content: "";
+}
+
+/* 読み直しの結果。数秒で消えるので、消えたときに幅を取らないよう空なら畳む */
+.mn-hud__status {
+  overflow: hidden;
+  max-width: 40vw;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mn-error {

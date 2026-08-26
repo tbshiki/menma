@@ -8,6 +8,16 @@ import { createCounter } from "./counter";
  * 触れたときだけはっきり見せる（濃さの制御は CSS 側）。
  */
 
+/**
+ * 読み直しボタンの見せ方（設計 16.5）。
+ *
+ * `message` は結果の短い知らせ。数秒で消える
+ */
+export type ReloadState = {
+  status: "idle" | "updated" | "busy";
+  message?: string | undefined;
+};
+
 export type HudOptions = {
   showPageNumber: boolean;
   showControls: boolean;
@@ -17,6 +27,8 @@ export type HudOptions = {
   onToggleFullscreen?: (() => void) | undefined;
   /** ページ番号を 2 段階で操作したときに呼ぶ（D-22） */
   onExit: () => void;
+  /** 読み直せる取得元のときだけ渡す。無ければボタンを出さない（FR-40） */
+  onReload?: ((options: { includeAssets: boolean }) => void) | undefined;
 };
 
 export type Hud = {
@@ -24,6 +36,8 @@ export type Hud = {
   update(state: PresentationState): void;
   /** 全画面状態に合わせてボタンの表示を切り替える */
   setFullscreen(active: boolean): void;
+  /** 読み直しの状態と結果を伝える（FR-41）。ボタンが無ければ何もしない */
+  setReload(state: ReloadState): void;
   /** タイマーなどの後始末 */
   destroy(): void;
 };
@@ -42,6 +56,17 @@ export function createHud(options: HudOptions): Hud {
   actions.hidden = !options.showControls;
   root.append(actions);
 
+  const status = document.createElement("span");
+  status.className = "mn-hud__status";
+  // 読み直しの結果は割り込ませない。ページ切り替えの読み上げと競合させないため polite にする
+  status.setAttribute("aria-live", "polite");
+
+  const reload = createReloadButton(options.onReload);
+
+  if (reload) {
+    actions.append(status, reload);
+  }
+
   const previous = createButton("前のスライド", "‹", options.onPrevious);
   const next = createButton("次のスライド", "›", options.onNext);
   actions.append(previous, next);
@@ -54,6 +79,27 @@ export function createHud(options: HudOptions): Hud {
     actions.append(fullscreen);
   }
 
+  // 知らせを消すためのタイマー。デッキを差し替えても残らないよう destroy で止める
+  let timer: number | undefined;
+
+  const notify = (message: string | undefined): void => {
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      timer = undefined;
+    }
+
+    status.textContent = message ?? "";
+
+    if (message === undefined) {
+      return;
+    }
+
+    timer = window.setTimeout(() => {
+      status.textContent = "";
+      timer = undefined;
+    }, 4000);
+  };
+
   return {
     root,
 
@@ -65,6 +111,23 @@ export function createHud(options: HudOptions): Hud {
 
     destroy(): void {
       counter.destroy();
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+      }
+    },
+
+    setReload(state: ReloadState): void {
+      if (!reload) {
+        return;
+      }
+
+      reload.disabled = state.status === "busy";
+      reload.dataset.updated = String(state.status === "updated");
+      reload.setAttribute(
+        "aria-label",
+        state.status === "updated" ? "原稿を読み直す（更新があります）" : "原稿を読み直す",
+      );
+      notify(state.message);
     },
 
     setFullscreen(active: boolean): void {
@@ -77,7 +140,36 @@ export function createHud(options: HudOptions): Hud {
   };
 }
 
-function createButton(label: string, glyph: string, onClick: () => void): HTMLButtonElement {
+/**
+ * 原稿の読み直し（FR-40〜FR-42）。
+ *
+ * 1 クリックは原稿だけ。画像も読み直すのは右クリックと `Shift` + クリックに割り当てる。
+ * **右クリックだけにしない。** キーボードや触るだけの環境から届かなくなるため（D-27）。
+ */
+function createReloadButton(onReload: HudOptions["onReload"]): HTMLButtonElement | undefined {
+  if (!onReload) {
+    return undefined;
+  }
+
+  const button = createButton("原稿を読み直す", "🔄", (event) => {
+    onReload({ includeAssets: event.shiftKey });
+  });
+  button.dataset.updated = "false";
+  button.title = "原稿を読み直す（右クリックか Shift + クリックで画像も）";
+
+  button.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    onReload({ includeAssets: true });
+  });
+
+  return button;
+}
+
+function createButton(
+  label: string,
+  glyph: string,
+  onClick: (event: MouseEvent) => void,
+): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "mn-hud__button";
@@ -92,7 +184,7 @@ function createButton(label: string, glyph: string, onClick: () => void): HTMLBu
     if (event.detail > 0) {
       button.blur();
     }
-    onClick();
+    onClick(event);
   });
 
   return button;
