@@ -5,7 +5,12 @@ import {
   type DeckSource,
 } from "../deck/source";
 import type { Appearance } from "../storage/appearance";
-import { readDroppedHandle } from "../storage/fileAccess";
+import {
+  isFilePickerSupported,
+  pickDeckFiles,
+  readDroppedHandle,
+  type FileHandles,
+} from "../storage/fileAccess";
 import { describeRejected, selectFiles } from "./fileSelection";
 
 /**
@@ -13,9 +18,6 @@ import { describeRejected, selectFiles } from "./fileSelection";
  *
  * 原稿の渡し方は 3 つだけ。ここは受け取るだけで、解釈も描画もしない。
  */
-
-/** ファイル名から元ファイルへの参照を引く（設計 16.1）。取れた環境でだけ中身が入る */
-type FileHandles = ReadonlyMap<string, FileSystemFileHandle>;
 
 export type HomeOptions = {
   /**
@@ -139,7 +141,7 @@ export function createHome(options: HomeOptions): HomeView {
             name: markdown.name,
             text,
             assets: assets as DeckAsset[],
-            // 参照が取れていれば、あとから 🔄 で読み直せる（FR-40）
+            // 参照が取れていれば、あとから ↻ で読み直せる（FR-40）
             handle: handles?.get(markdown.name),
             lastModified: markdown.lastModified,
           },
@@ -224,9 +226,10 @@ function createFileSection(
 ) {
   const section = createSection(
     "ファイルを開く",
-    "Markdown と、原稿が使う画像をまとめて選ぶか、ここへ落としてください。原稿を書き換えたら、発表画面の 🔄 で読み直せます。",
+    "Markdown と、原稿が使う画像をまとめて選ぶか、ここへ落としてください。原稿を書き換えたら、発表画面の ↻ で読み直せます。",
   );
 
+  // 参照の残らないファイル選択。対応環境では隠すが、DOM からは外さない（設計 16.1）
   const input = document.createElement("input");
   input.type = "file";
   input.className = "mn-home__file";
@@ -241,6 +244,30 @@ function createFileSection(
   const drop = document.createElement("div");
   drop.className = "mn-home__drop";
   drop.append(input);
+
+  /**
+   * 参照の残るファイル選択（FR-40）。
+   *
+   * ここで選んでおけば、発表中の読み直しでファイルを選び直さずに済む。
+   * 使えない環境では `input` がそのまま出る。
+   */
+  if (isFilePickerSupported(window)) {
+    input.hidden = true;
+
+    const pick = document.createElement("button");
+    pick.type = "button";
+    pick.className = "mn-home__button";
+    pick.textContent = "ファイルを選ぶ";
+    pick.addEventListener("click", () => {
+      void pickDeckFiles(window).then((picked) => {
+        if (picked) {
+          onFiles(picked.files, picked.handles);
+        }
+      });
+    });
+
+    drop.append(pick);
+  }
 
   const onDragOver = (event: DragEvent): void => {
     event.preventDefault();

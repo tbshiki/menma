@@ -2,6 +2,7 @@ import {
   MAX_ASSETS_TOTAL_BYTES,
   MAX_ASSET_BYTES,
   SUPPORTED_EXTENSIONS,
+  SUPPORTED_IMAGE_EXTENSIONS,
   isSupportedFileName,
   type DeckAsset,
   type FileDeckSource,
@@ -57,6 +58,71 @@ const READ = { mode: "read" } as const;
 
 /** `input` のファイル選択を待つ上限。これを過ぎたら閉じたものとして扱う */
 const PICKER_TIMEOUT_MS = 120_000;
+
+/** ファイル名から元ファイルへの参照を引く（設計 16.1） */
+export type FileHandles = ReadonlyMap<string, FileSystemFileHandle>;
+
+/** 選ばれたファイルと、取れた参照 */
+export type PickedFiles = {
+  files: readonly File[];
+  handles: FileHandles;
+};
+
+/** 参照を持てるファイル選択が使えるか（Chromium 系）。使えなければ `input` で選ぶ */
+export function isFilePickerSupported(target: Window): boolean {
+  return typeof (target as PickerWindow).showOpenFilePicker === "function";
+}
+
+/**
+ * 原稿と画像をまとめて選ぶ（FR-25、FR-30）。
+ *
+ * `input` と違って**参照が残る**ので、開いたあと ↻ を押すだけで読み直せる（FR-40）。
+ * 閉じられた場合は undefined を返し、呼び出し側は何もしない。
+ */
+export async function pickDeckFiles(target: Window): Promise<PickedFiles | undefined> {
+  const picker = (target as PickerWindow).showOpenFilePicker;
+
+  if (!picker) {
+    return undefined;
+  }
+
+  let picked: FileSystemFileHandle[];
+
+  try {
+    picked = await picker.call(target, {
+      multiple: true,
+      types: [
+        {
+          description: "原稿と画像",
+          accept: { "text/markdown": SUPPORTED_EXTENSIONS, "image/*": SUPPORTED_IMAGE_EXTENSIONS },
+        },
+      ],
+    });
+  } catch {
+    // 閉じただけか、選べなかった。どちらも入口画面は何も変えない
+    return undefined;
+  }
+
+  const files: File[] = [];
+  const handles = new Map<string, FileSystemFileHandle>();
+
+  for (const handle of picked) {
+    const file = await readFile(handle);
+
+    if (!file) {
+      continue;
+    }
+
+    files.push(file);
+
+    // 同名が複数選ばれたら最初の 1 つ。画像の照合（D-20）と同じ扱いにする
+    if (!handles.has(handle.name)) {
+      handles.set(handle.name, handle);
+    }
+  }
+
+  return { files, handles };
+}
 
 /**
  * ドロップされた項目からファイル参照を取り出す（設計 16.1）。

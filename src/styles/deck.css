@@ -231,6 +231,7 @@
 }
 
 .mn-hud__actions {
+  position: relative;
   display: flex;
   margin-inline-start: auto;
   gap: 4px;
@@ -282,12 +283,26 @@
   content: "";
 }
 
-/* 読み直しの結果。数秒で消えるので、消えたときに幅を取らないよう空なら畳む */
+/*
+ * 読み直しの結果はボタンの 1 行上へ、右端をボタン群に揃えて出す。
+ * 流れから外して置くことで、知らせが出入りしてもボタンの位置が動かない。
+ */
 .mn-hud__status {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
   overflow: hidden;
-  max-width: 40vw;
+  max-width: 60vw;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--mn-hud-bg, rgb(255 255 255 / 0.75));
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 知らせが無いときに地だけが残らないようにする */
+.mn-hud__status:empty {
+  display: none;
 }
 
 .mn-error {

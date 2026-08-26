@@ -101,7 +101,7 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
       mount,
       target,
       exitToHome,
-      // 読み直せる取得元のときだけ 🔄 を出す（FR-40）
+      // 読み直せる取得元のときだけ ↻ を出す（FR-40）
       canReloadSource(next) ? requestReload : undefined,
     );
 

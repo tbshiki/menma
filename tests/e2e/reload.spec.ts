@@ -19,7 +19,8 @@ const SECOND = "# 書き換えた 1 枚目\n\n---\n\n# 書き換えた 2 枚目"
 /** 偽のファイル。中身・更新時刻・読み込みにかかる時間はテストから書き換える */
 async function stubFileSystem(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const state = { text: "", lastModified: 1000, delay: 0, broken: false };
+    // picks はファイル選択を開いた回数。参照が効いていれば 2 回目以降は増えない
+    const state = { text: "", lastModified: 1000, delay: 0, broken: false, picks: 0 };
 
     const abort = (): Promise<never> => {
       const error = new Error("閉じた");
@@ -30,8 +31,10 @@ async function stubFileSystem(page: Page): Promise<void> {
     Object.assign(window, {
       menmaFile: state,
       // 参照が読めない状態ではここへ落ちる。テストでは常に閉じられたものとして扱う
-      showOpenFilePicker: () =>
-        state.broken
+      showOpenFilePicker: () => {
+        state.picks += 1;
+
+        return state.broken
           ? abort()
           : Promise.resolve([
               {
@@ -54,7 +57,8 @@ async function stubFileSystem(page: Page): Promise<void> {
                         ),
                       ),
               },
-            ]),
+            ]);
+      },
     });
   });
 }
@@ -70,6 +74,12 @@ async function writeFile(page: Page, text: string, lastModified: number, delay =
       state.delay = nextDelay as number;
     },
     [text, lastModified, delay] as const,
+  );
+}
+
+async function pickCount(page: Page): Promise<number> {
+  return page.evaluate(
+    () => (window as unknown as { menmaFile: { picks: number } }).menmaFile.picks,
   );
 }
 
@@ -89,6 +99,22 @@ test.beforeEach(async ({ page }) => {
   });
   await expect(page.locator(visibleSlide)).toContainText("1 枚目");
   await writeFile(page, FIRST, 1000);
+});
+
+test("入口画面から選んだ原稿は、ファイル選択を通らずに読み直せる（FR-40）", async ({ page }) => {
+  await page.goto("/");
+  await writeFile(page, FIRST, 1000);
+
+  await page.getByRole("button", { name: "ファイルを選ぶ" }).click();
+  await expect(page.locator(visibleSlide)).toContainText("1 枚目");
+  expect(await pickCount(page)).toBe(1);
+
+  await writeFile(page, SECOND, 2000);
+  await page.locator(reloadButton).click();
+
+  await expect(page.locator(visibleSlide)).toContainText("書き換えた 1 枚目");
+  // 開いたときの参照をそのまま使うので、ファイル選択は増えない
+  expect(await pickCount(page)).toBe(1);
 });
 
 test("貼り付けた原稿には読み直しのボタンを出さない", async ({ page }) => {

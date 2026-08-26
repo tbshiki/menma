@@ -150,7 +150,7 @@ function createReloadButton(onReload: HudOptions["onReload"]): HTMLButtonElement
     return undefined;
   }
 
-  const button = createButton("原稿を読み直す", "🔄", (event) => {
+  const button = createButton("原稿を読み直す", "↻", (event) => {
     onReload({ includeAssets: event.shiftKey });
   });
   button.dataset.updated = "false";
