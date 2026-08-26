@@ -129,7 +129,9 @@ src/
 │   ├── cssValue.ts            # 原稿由来の値を CSS へ渡す前の検査
 │   ├── colors.ts              # 色の決め方と明暗の判定（D-21）
 │   ├── progress.ts            # 進み具合のバー
-│   ├── hud.ts                 # ページ番号・操作 UI・読み直し（16.5）
+│   ├── hud.ts                 # ページ番号・操作 UI・読み直し（16.5）・設定の開閉（17 章）
+│   ├── settings.ts            # 発表中の設定パネル（17 章）
+│   ├── appearance.ts          # 見た目の指定を DOM へ当てる（17.2）
 │   ├── errorScreen.ts
 │   └── scaler.ts              # 16:9 フィット
 │
@@ -183,10 +185,13 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
     <!-- 操作 UI と進み具合のバーは画面基準（キャンバスの外）。ページ番号が左下、ボタンが右下 -->
     <div class="mn-hud">
       <button type="button" class="mn-hud__counter" data-armed="false">3 / 24</button>
+      <!-- 既定は閉じている。⚙ で開く（17 章） -->
+      <div class="mn-settings" role="group" aria-label="表示の設定" hidden>...</div>
       <div class="mn-hud__actions">
         <!-- ファイルから開いた原稿のときだけ出る。更新があると data-updated="true"（16.5） -->
         <span class="mn-hud__status" aria-live="polite"></span>
         <button type="button" class="mn-hud__button" aria-label="原稿を読み直す" data-updated="false"></button>
+        <button type="button" class="mn-hud__button" aria-label="表示の設定" data-settings-toggle="true"></button>
         <button type="button" class="mn-hud__button" aria-label="前のスライド"></button>
         <button type="button" class="mn-hud__button" aria-label="次のスライド"></button>
         <button type="button" class="mn-hud__button" aria-label="全画面表示"></button>
@@ -614,3 +619,36 @@ export type DeckSource =
 - 右クリック（`contextmenu`）と `Shift` + クリック: 画像も一緒に読み直す（FR-42）。**右クリックだけだとキーボードから届かない**ため、`Shift` + クリックも同じ動作にする
 - 結果は `.mn-hud__status`（`aria-live="polite"`）へ、**ボタン群の 1 行上に右詰めで**短く出し、数秒で消す。流れから外して置き、知らせの出入りでボタンの位置を動かさない。長い知らせは上へ折り返す
 - **結果とただし書きは両方出す。** 「読み直せなかった画像はそのままです: a.png」だけを出すと、原稿が読み直せたのかどうかが分からない**知らせを持たない状態変化（更新の検知など）では、読みかけの知らせを消さない**
+
+## 17. 発表中の設定（v0.6.0）
+
+発表画面から見た目を変える（FR-43、[D-28](./decisions.md)）。**原稿は書き換えない。**
+
+### 17.1 変えられるもの
+
+| 項目 | 保存する値 | 未指定のとき |
+| --- | --- | --- |
+| 進み具合のバーの表示 | `showProgress: boolean` | 原稿の `showProgress` に従う |
+| スライドの外側の色 | `pageBackground: string` | 原稿かテーマの色 |
+| 進み具合のバーの色 | `progressColor: string` | 原稿かテーマの色 |
+
+保存先は入口画面の色設定と同じ `localStorage`（`storage/appearance.ts`）。**入口画面と発表画面は同じ値を見る。** 優先順位も同じで、UI の指定 → 原稿の指定 → テーマ（[D-21](./decisions.md)）。
+
+「原稿の指定に戻す」は 3 つのキーをすべて落とす。すべて未指定になったら保存そのものを消す。
+
+### 17.2 その場で当て直す
+
+`view/appearance.ts` の `applyAppearance()` が唯一の適用点で、**描画時と設定変更時の両方から呼ぶ**。
+
+- **必ず前の指定を消してから当て直す。** 足すだけにすると、暗い色から明るい色へ戻したときに操作 UI の文字色（`--mn-hud-fg`）が暗いまま残る
+- デッキは作り直さない。原稿は変わっていないので DOM を捨てる理由が無く、表示中のページも動かない
+- バーの表示は `progress.root.hidden` を切り替えるだけ
+
+設定パネルの色の初期値は、**開くたびに実際の算出値から引く**（`getComputedStyle` → `toHexColor`）。原稿やテーマの色が入っている欄に、無関係な既定色を出さないため。
+
+### 17.3 閉じ方と発表の邪魔をしないこと
+
+- 既定は閉じている。`.mn-hud` の中に置き、操作ボタンの上へ出す
+- `Esc` と外側の `pointerdown` で閉じる。**開閉ボタン自身は外側の判定から外す**（閉じた直後に開き直してしまうため）。判定は `data-settings-toggle` 属性で示し合わせる
+- 開いている間は操作 UI を減光しない（`.mn-hud:has(.mn-settings:not([hidden]))`）
+- パネルの中は `input` / `button` なので、フォーカスがある間はページ移動キーが働かない（FR-14）。設定中に矢印キーでスライドが動かない

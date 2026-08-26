@@ -94,16 +94,16 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
 
     stop();
     bindings = createAssetBindings(sourceAssets(next));
-    presentation = startPresentation(
-      deck,
-      bindings,
-      appearance,
-      mount,
-      target,
-      exitToHome,
+    presentation = startPresentation(deck, bindings, appearance, mount, target, {
+      onExit: exitToHome,
       // 読み直せる取得元のときだけ ↻ を出す（FR-40）
-      canReloadSource(next) ? requestReload : undefined,
-    );
+      onReload: canReloadSource(next) ? requestReload : undefined,
+      // 発表中に変えた見た目も、入口画面と同じ場所へ保存する（FR-43、D-28）
+      onAppearanceChange: (next) => {
+        appearance = next;
+        saveAppearance(target, next);
+      },
+    });
 
     if (message !== undefined) {
       presentation.setReload({ status: "idle", message });

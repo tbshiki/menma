@@ -10,7 +10,18 @@ export type Appearance = {
   pageBackground?: string;
   /** 進み具合のバーの色。未指定なら原稿かテーマに従う */
   progressColor?: string;
+  /** 進み具合のバーを出すか。**未指定なら原稿の showProgress に従う**（FR-43、D-28） */
+  showProgress?: boolean;
 };
+
+/** 何も指定されていないか。空なら保存そのものを消す */
+export function isDefaultAppearance(appearance: Appearance): boolean {
+  return (
+    appearance.pageBackground === undefined &&
+    appearance.progressColor === undefined &&
+    appearance.showProgress === undefined
+  );
+}
 
 const STORAGE_KEY = "menma:appearance";
 
@@ -36,7 +47,7 @@ export function loadAppearance(target: Window): Appearance {
 
 export function saveAppearance(target: Window, appearance: Appearance): void {
   try {
-    if (appearance.pageBackground === undefined && appearance.progressColor === undefined) {
+    if (isDefaultAppearance(appearance)) {
       target.localStorage.removeItem(STORAGE_KEY);
       return;
     }
@@ -60,6 +71,9 @@ function toAppearance(value: unknown): Appearance {
   }
   if (typeof record["progressColor"] === "string") {
     appearance.progressColor = record["progressColor"];
+  }
+  if (typeof record["showProgress"] === "boolean") {
+    appearance.showProgress = record["showProgress"];
   }
 
   return appearance;

@@ -9,10 +9,23 @@ import {
 } from "../navigation/fullscreen";
 import { connectHash } from "../navigation/hash";
 import { connectKeyboard } from "../navigation/keyboard";
+import { applyAppearance, resolveShowProgress } from "./appearance";
+import { toHexColor } from "./colors";
 import { createHud, type HudOptions, type ReloadState } from "./hud";
 import { createProgress } from "./progress";
 import { renderDeck } from "./renderDeck";
 import { connectScaler } from "./scaler";
+import { createSettings } from "./settings";
+
+/** 発表画面から外へ出る操作 */
+export type PresentationHandlers = {
+  /** 入口へ戻る（FR-28、D-22） */
+  onExit: () => void;
+  /** 読み直せる取得元のときだけ渡す（FR-40） */
+  onReload?: HudOptions["onReload"];
+  /** 見た目が変わったとき。保存は呼び出し側が行う（FR-43） */
+  onAppearanceChange: (appearance: Appearance) => void;
+};
 
 /** 表示中の発表画面。差し替えと後始末はここを通す */
 export type Presentation = {
@@ -34,11 +47,11 @@ export function startPresentation(
   appearance: Appearance,
   mount: HTMLElement,
   target: Window,
-  onExit: () => void,
-  onReload?: HudOptions["onReload"],
+  handlers: PresentationHandlers,
 ): Presentation {
   const view = renderDeck(deck, bindings, appearance);
   const controller = new NavigationController(deck.slides.length);
+  const progress = createProgress();
 
   // 全画面は使える環境でだけ提供する（FR-17 は Progressive Enhancement）
   const fullscreenAvailable = isFullscreenSupported(target.document);
@@ -47,6 +60,29 @@ export function startPresentation(
         void toggleFullscreen(view.root);
       }
     : undefined;
+
+  /**
+   * 見た目の変更をその場へ当てる（FR-43）。
+   *
+   * デッキを作り直さない。読み直し（FR-40）と違って原稿は変わっていないので、
+   * DOM を捨てる理由が無い
+   */
+  const applyLive = (next: Appearance): void => {
+    applyAppearance(view.root, deck.meta, next);
+    progress.root.hidden = !resolveShowProgress(deck.meta, next);
+    handlers.onAppearanceChange(next);
+  };
+
+  const settings = createSettings({
+    appearance,
+    deckShowProgress: deck.meta.showProgress,
+    // 未指定の欄には、いま実際に出ている色を出す
+    readColors: () => ({
+      pageBackground: toHexColor(target.getComputedStyle(view.root).backgroundColor),
+      progressColor: toHexColor(target.getComputedStyle(progress.bar).backgroundColor),
+    }),
+    onChange: applyLive,
+  });
 
   const hud = createHud({
     showPageNumber: deck.meta.showPageNumber,
@@ -58,12 +94,12 @@ export function startPresentation(
       controller.next();
     },
     onToggleFullscreen: requestToggleFullscreen,
-    onExit,
-    onReload,
+    onExit: handlers.onExit,
+    onReload: handlers.onReload,
+    settings,
   });
 
-  const progress = createProgress();
-  progress.root.hidden = !deck.meta.showProgress;
+  progress.root.hidden = !resolveShowProgress(deck.meta, appearance);
 
   // 操作 UI と進み具合のバーは画面基準。拡縮されても位置が動かない（FR-18、FR-35）
   view.root.append(hud.root, progress.root);

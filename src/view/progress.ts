@@ -9,6 +9,8 @@ import type { PresentationState } from "../navigation/controller";
 
 export type Progress = {
   root: HTMLElement;
+  /** 実際に色が付く要素。設定パネルが現在の色を読む（FR-43） */
+  bar: HTMLElement;
   update(state: PresentationState): void;
 };
 
@@ -24,6 +26,7 @@ export function createProgress(): Progress {
 
   return {
     root,
+    bar,
 
     update(state: PresentationState): void {
       // 1 枚しかないデッキでは満杯にする（0 除算も避ける）

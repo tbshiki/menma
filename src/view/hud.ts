@@ -1,5 +1,6 @@
 import type { PresentationState } from "../navigation/controller";
 import { createCounter } from "./counter";
+import { TOGGLE_ATTRIBUTE, type SettingsView } from "./settings";
 
 /**
  * 発表中に出す最小限の情報と操作（FR-18、FR-22）。
@@ -29,6 +30,8 @@ export type HudOptions = {
   onExit: () => void;
   /** 読み直せる取得元のときだけ渡す。無ければボタンを出さない（FR-40） */
   onReload?: ((options: { includeAssets: boolean }) => void) | undefined;
+  /** 見た目を変えられるときだけ渡す。無ければ設定のボタンを出さない（FR-43） */
+  settings?: SettingsView | undefined;
 };
 
 export type Hud = {
@@ -65,6 +68,24 @@ export function createHud(options: HudOptions): Hud {
 
   if (reload) {
     actions.append(status, reload);
+  }
+
+  const settings = options.settings;
+
+  if (settings) {
+    // パネルは操作 UI の層に置く。拡縮の影響を受けず、印刷にも出ない（設計 17）
+    root.append(settings.root);
+
+    const open = createButton("表示の設定", "⚙", () => {
+      if (settings.isOpen()) {
+        settings.close();
+        return;
+      }
+      settings.open();
+    });
+    // 外側のクリックで閉じる判定から、このボタンだけ外す
+    open.setAttribute(TOGGLE_ATTRIBUTE, "true");
+    actions.append(open);
   }
 
   const previous = createButton("前のスライド", "‹", options.onPrevious);
@@ -107,6 +128,7 @@ export function createHud(options: HudOptions): Hud {
 
     destroy(): void {
       counter.destroy();
+      settings?.destroy();
       if (timer !== undefined) {
         window.clearTimeout(timer);
       }

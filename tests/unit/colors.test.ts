@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { isDarkBackground, parseRgb, relativeLuminance, resolveColor } from "../../src/view/colors";
+import {
+  isDarkBackground,
+  parseRgb,
+  relativeLuminance,
+  resolveColor,
+  toHexColor,
+} from "../../src/view/colors";
 
 describe("resolveColor", () => {
   it("UI の指定を最優先にする（D-21）", () => {
@@ -66,5 +72,19 @@ describe("isDarkBackground", () => {
   it("判定できない値は明るい前提で扱う", () => {
     // 読めない値で文字色を反転させると、かえって読めなくなる
     expect(isDarkBackground("transparent")).toBe(false);
+  });
+});
+
+describe("toHexColor", () => {
+  it("算出済みの色を #rrggbb へ直す（FR-43）", () => {
+    expect(toHexColor("rgb(18, 52, 86)")).toBe("#123456");
+    expect(toHexColor("rgb(0, 0, 0)")).toBe("#000000");
+    // 透明度は落とす。設定パネルの初期値にしか使わない
+    expect(toHexColor("rgb(255 255 255 / 0.5)")).toBe("#ffffff");
+  });
+
+  it("色として読めない値は undefined", () => {
+    expect(toHexColor("transparent")).toBeUndefined();
+    expect(toHexColor("")).toBeUndefined();
   });
 });

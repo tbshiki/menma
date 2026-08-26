@@ -190,7 +190,9 @@
 .mn-hud:focus-within,
 .mn-hud:has(.mn-hud__counter[data-armed="true"]),
 /* 読み直しの結果は読まれないと意味がないので、出ている間だけはっきり見せる */
-.mn-hud:has(.mn-hud__status:not(:empty)) {
+.mn-hud:has(.mn-hud__status:not(:empty)),
+/* 設定を開いている間も同じ。半透明のまま操作させない（FR-43） */
+.mn-hud:has(.mn-settings:not([hidden])) {
   opacity: 1;
 }
 
@@ -304,6 +306,65 @@
 /* 知らせが無いときに地だけが残らないようにする */
 .mn-hud__status:empty {
   display: none;
+}
+
+/* ---- 発表中の設定（FR-43、D-28） ------------------------------------------ */
+
+/*
+ * 操作ボタンの上へ出す。基準は position: fixed の .mn-hud。
+ * スライドの上に重なるので、地を敷いて読めるようにする。
+ */
+.mn-settings {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border: 1px solid var(--mn-hud-fg, var(--mn-fg));
+  border-radius: 6px;
+  background: var(--mn-hud-bg, rgb(255 255 255 / 0.95));
+  gap: 6px;
+  /* 親は pointer-events: none。ここは操作を受け取る */
+  pointer-events: auto;
+}
+
+.mn-settings[hidden] {
+  display: none;
+}
+
+.mn-settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  gap: 10px;
+}
+
+.mn-settings__color {
+  width: 2.2em;
+  height: 1.4em;
+  padding: 0;
+  border: 1px solid currentcolor;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+}
+
+.mn-settings__check {
+  cursor: pointer;
+  /* 既定の青いチェックのままだと、暗い背景で浮くので色を合わせる */
+  accent-color: var(--mn-progress-color, var(--mn-accent));
+}
+
+.mn-settings__reset {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
 }
 
 .mn-error {

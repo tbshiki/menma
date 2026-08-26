@@ -16,6 +16,21 @@ export function resolveColor(fromUi: string | undefined, fromDeck: string): stri
   return undefined;
 }
 
+/**
+ * 算出済みの色を `<input type="color">` が読める `#rrggbb` へ直す（FR-43）。
+ *
+ * 透明度は落ちる。設定パネルの初期値を出すためだけに使うので、これで足りる。
+ */
+export function toHexColor(computed: string): string | undefined {
+  const rgb = parseRgb(computed);
+
+  if (!rgb) {
+    return undefined;
+  }
+
+  return `#${rgb.map((part) => Math.round(part).toString(16).padStart(2, "0")).join("")}`;
+}
+
 /** `rgb(16, 20, 24)` や `rgb(16 20 24 / 0.5)` から成分を取り出す */
 export function parseRgb(value: string): [number, number, number] | undefined {
   const numbers = value.match(/\d+(\.\d+)?/g);
