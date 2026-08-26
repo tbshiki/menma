@@ -1,5 +1,6 @@
 import {
   SOURCE_FORMAT_VERSION,
+  isBundled,
   toStoredDeckSource,
   type DeckSource,
   type StoredSource,
@@ -55,17 +56,49 @@ export async function saveSource(target: Window, source: DeckSource): Promise<vo
     return;
   }
 
-  const stored: StoredSource = { version: SOURCE_FORMAT_VERSION, source };
-
   try {
-    const transaction = db.transaction(STORE_NAME, "readwrite");
-    transaction.objectStore(STORE_NAME).put(stored, RECORD_KEY);
-    await completed(transaction);
+    await put(db, source);
   } catch {
-    // 容量超過などで保存できなくても、いま表示している原稿はそのまま使える
+    // 構造化クローンできない値が混ざっていると put ごと失敗する。原稿と画像まで
+    // 巻き添えにしないよう、読み直し用のファイル参照を落として 1 度だけやり直す。
+    // 参照を失うと次回は選び直しになるが、原稿が消えるよりはよい（設計 15.3、16.1）
+    try {
+      await put(db, withoutHandles(source));
+    } catch {
+      // 容量超過などで保存できなくても、いま表示している原稿はそのまま使える
+    }
   } finally {
     db.close();
   }
+}
+
+function put(db: IDBDatabase, source: DeckSource): Promise<void> {
+  const stored: StoredSource = { version: SOURCE_FORMAT_VERSION, source };
+  const transaction = db.transaction(STORE_NAME, "readwrite");
+
+  // put は構造化クローンに失敗するとその場で投げる。呼び出し側の try で受ける
+  transaction.objectStore(STORE_NAME).put(stored, RECORD_KEY);
+
+  return completed(transaction);
+}
+
+/** 保存できなかったときの退避用。ファイル参照だけを外した同じ取得元を作る */
+function withoutHandles(source: DeckSource): DeckSource {
+  if (isBundled(source)) {
+    return source;
+  }
+
+  const assets = source.assets.map((asset) => ({ name: asset.name, blob: asset.blob }));
+
+  return source.kind === "file"
+    ? {
+        kind: "file",
+        name: source.name,
+        text: source.text,
+        assets,
+        lastModified: source.lastModified,
+      }
+    : { kind: "text", text: source.text, assets };
 }
 
 export async function clearSource(target: Window): Promise<void> {

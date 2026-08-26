@@ -8,6 +8,7 @@ import { expect, test, type Page } from "@playwright/test";
  * menma のコードはそのまま動かす。
  */
 
+const home = ".mn-home";
 const visibleSlide = ".mn-slide:not([hidden])";
 const reloadButton = '.mn-hud__button[aria-label^="原稿を読み直す"]';
 const status = ".mn-hud__status";
@@ -15,40 +16,67 @@ const status = ".mn-hud__status";
 const FIRST = "# 1 枚目\n\n---\n\n# 2 枚目";
 const SECOND = "# 書き換えた 1 枚目\n\n---\n\n# 書き換えた 2 枚目";
 
-/** 偽のファイル。中身と更新時刻はテストから書き換える */
+/** 偽のファイル。中身・更新時刻・読み込みにかかる時間はテストから書き換える */
 async function stubFileSystem(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const state = { text: "", lastModified: 1000 };
+    const state = { text: "", lastModified: 1000, delay: 0, broken: false };
+
+    const abort = (): Promise<never> => {
+      const error = new Error("閉じた");
+      error.name = "AbortError";
+      return Promise.reject(error);
+    };
 
     Object.assign(window, {
       menmaFile: state,
+      // 参照が読めない状態ではここへ落ちる。テストでは常に閉じられたものとして扱う
       showOpenFilePicker: () =>
-        Promise.resolve([
-          {
-            kind: "file",
-            name: "talk.md",
-            queryPermission: () => Promise.resolve("granted"),
-            requestPermission: () => Promise.resolve("granted"),
-            getFile: () =>
-              Promise.resolve(
-                new File([state.text], "talk.md", { lastModified: state.lastModified }),
-              ),
-          },
-        ]),
+        state.broken
+          ? abort()
+          : Promise.resolve([
+              {
+                kind: "file",
+                name: "talk.md",
+                queryPermission: () => Promise.resolve("granted"),
+                requestPermission: () => Promise.resolve("granted"),
+                getFile: () =>
+                  state.broken
+                    ? Promise.reject(new Error("読めない"))
+                    : new Promise((resolve) =>
+                        setTimeout(
+                          () =>
+                            resolve(
+                              new File([state.text], "talk.md", {
+                                lastModified: state.lastModified,
+                              }),
+                            ),
+                          state.delay,
+                        ),
+                      ),
+              },
+            ]),
     });
   });
 }
 
-async function writeFile(page: Page, text: string, lastModified: number): Promise<void> {
+async function writeFile(page: Page, text: string, lastModified: number, delay = 0): Promise<void> {
   await page.evaluate(
-    ([nextText, nextTime]) => {
-      const state = (window as unknown as { menmaFile: { text: string; lastModified: number } })
-        .menmaFile;
+    ([nextText, nextTime, nextDelay]) => {
+      const state = (
+        window as unknown as { menmaFile: { text: string; lastModified: number; delay: number } }
+      ).menmaFile;
       state.text = nextText as string;
       state.lastModified = nextTime as number;
+      state.delay = nextDelay as number;
     },
-    [text, lastModified] as const,
+    [text, lastModified, delay] as const,
   );
+}
+
+/** 参照を覚えさせる。1 度読み直せば、以降はファイル選択を通らない */
+async function linkHandle(page: Page): Promise<void> {
+  await page.locator(reloadButton).click();
+  await expect(page.locator(status)).toHaveText("変更はありません。");
 }
 
 test.beforeEach(async ({ page }) => {
@@ -119,6 +147,53 @@ test("戻ってきたときに更新を見つけると印を付ける（反映�
   await expect(page.locator(reloadButton)).toHaveAttribute("data-updated", "true");
   // 印が付くだけで、画面は変わらない（D-27）
   await expect(page.locator(visibleSlide)).toContainText("1 枚目");
+});
+
+test("読み直した内容はリロードしても残る（FR-27）", async ({ page }) => {
+  await writeFile(page, SECOND, 2000);
+  await page.locator(reloadButton).click();
+  await expect(page.locator(visibleSlide)).toContainText("書き換えた 1 枚目");
+
+  await page.reload();
+
+  await expect(page.locator(visibleSlide)).toContainText("書き換えた 1 枚目");
+});
+
+test("読み込みの途中で入口へ戻ったら、発表画面へ引き戻さない（FR-28）", async ({ page }) => {
+  await linkHandle(page);
+
+  // 読み込みに時間がかかる状態にして、待っている間に戻る
+  await writeFile(page, SECOND, 2000, 1500);
+  await page.locator(reloadButton).click();
+  await page.goBack();
+  await expect(page.locator(home)).toBeVisible();
+
+  await page.waitForTimeout(2500);
+
+  await expect(page.locator(home)).toBeVisible();
+  await expect(page.locator(visibleSlide)).toHaveCount(0);
+});
+
+test("取り消しても更新の印と知らせを消さない（FR-41）", async ({ page }) => {
+  await linkHandle(page);
+
+  await writeFile(page, SECOND, 2000);
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("focus"));
+  });
+  await expect(page.locator(reloadButton)).toHaveAttribute("data-updated", "true");
+  // 更新を見つけただけで、読みかけの知らせは消さない
+  await expect(page.locator(status)).toHaveText("変更はありません。");
+
+  // ファイルが読めなくなり、選び直しも閉じられた状態にする
+  await page.evaluate(() => {
+    (window as unknown as { menmaFile: { broken: boolean } }).menmaFile.broken = true;
+  });
+  await page.locator(reloadButton).click();
+
+  // 取り消しても、更新はまだ残っているので印は消さない
+  await expect(page.locator(reloadButton)).toHaveAttribute("data-updated", "true");
+  await expect(page.locator(reloadButton)).toBeEnabled();
 });
 
 test("読み直した原稿が壊れていても表示中のスライドを壊さない", async ({ page }) => {

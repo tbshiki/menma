@@ -55,6 +55,9 @@ type HandleAwareItem = DataTransferItem & {
 
 const READ = { mode: "read" } as const;
 
+/** `input` のファイル選択を待つ上限。これを過ぎたら閉じたものとして扱う */
+const PICKER_TIMEOUT_MS = 120_000;
+
 /**
  * ドロップされた項目からファイル参照を取り出す（設計 16.1）。
  *
@@ -137,7 +140,7 @@ export async function reloadFileSource(
   }
 
   const assets = options.includeAssets
-    ? await reloadAssets(source.assets)
+    ? await reloadAssets(source.assets, options.target)
     : { assets: source.assets, changed: false, note: undefined };
 
   const next: FileDeckSource = {
@@ -158,25 +161,46 @@ export async function reloadFileSource(
  * 画像を読み直す（FR-42）。
  *
  * **増えることはない。** すでに取り込んだ画像を同じ参照から読み直すだけで、新しい画像を
- * 足すには入口から選び直す。上限（FR-33）を超えたものは古いままにして名前を伝える。
+ * 足すには入口から選び直す。読めなかったもの、上限（FR-33）を超えたものは古いままにし、
+ * **黙って古いままにしない**で名前を伝える。
+ *
+ * 権限は操作を起点にしているので求めてよい（設計 16.2）。ただし**断られたらそこで止める**。
+ * 画像の枚数だけダイアログが並ぶと、発表中には手に負えなくなるため。
  */
-async function reloadAssets(assets: readonly DeckAsset[]): Promise<{
+async function reloadAssets(
+  assets: readonly DeckAsset[],
+  target: Window,
+): Promise<{
   assets: readonly DeckAsset[];
   changed: boolean;
   note: string | undefined;
 }> {
   const next: DeckAsset[] = [];
-  const skipped: string[] = [];
+  const tooLarge: string[] = [];
+  const unreadable: string[] = [];
+  let allowPrompt = true;
   let changed = false;
   let total = 0;
 
   for (const asset of assets) {
     const handle = asset.handle;
-    const file = handle && (await isReadable(handle)) ? await readFile(handle) : undefined;
+    let file: File | undefined;
+
+    if (handle) {
+      if (await isReadable(handle, allowPrompt ? target : undefined)) {
+        file = await readFile(handle);
+      } else {
+        allowPrompt = false;
+      }
+
+      if (!file) {
+        unreadable.push(asset.name);
+      }
+    }
 
     if (!file || file.size > MAX_ASSET_BYTES || total + file.size > MAX_ASSETS_TOTAL_BYTES) {
       if (file) {
-        skipped.push(asset.name);
+        tooLarge.push(asset.name);
       }
       total += asset.blob.size;
       next.push(asset);
@@ -190,12 +214,14 @@ async function reloadAssets(assets: readonly DeckAsset[]): Promise<{
     next.push({ name: asset.name, blob: file.slice(0, file.size, file.type), handle });
   }
 
-  return {
-    assets: next,
-    changed,
-    note:
-      skipped.length > 0 ? `大きすぎる画像はそのままにしました: ${skipped.join(" / ")}` : undefined,
-  };
+  const notes = [
+    tooLarge.length > 0 ? `大きすぎる画像はそのままにしました: ${tooLarge.join(" / ")}` : undefined,
+    unreadable.length > 0
+      ? `読み直せなかった画像はそのままです: ${unreadable.join(" / ")}`
+      : undefined,
+  ].filter((part): part is string => part !== undefined);
+
+  return { assets: next, changed, note: notes.length > 0 ? notes.join(" ") : undefined };
 }
 
 type PickedMarkdown =
@@ -255,8 +281,10 @@ async function pickMarkdown(source: FileDeckSource, target: Window): Promise<Pic
 /**
  * File System Access API が無い環境のファイル選択（Firefox / Safari）。
  *
- * 参照は得られないので、読み直すたびにここを通る。**開いたまま戻らない状態を作らない**よう、
- * `cancel` の無い環境ではウィンドウへ戻った時点で閉じたものとして扱う。
+ * 参照は得られないので、読み直すたびにここを通る。**開いたまま戻らない状態を作らない**。
+ * `cancel` の無い環境ではウィンドウへ戻った時点で閉じたものとして扱い、それも起きない
+ * 環境（WebKit のシート型ダイアログなど）に備えて時間でも打ち切る。ここが解決しないと
+ * 読み直しが走ったままになり、ボタンが押せなくなる。
  */
 function pickWithInput(target: Window): Promise<File | undefined> {
   return new Promise((resolve) => {
@@ -271,17 +299,24 @@ function pickWithInput(target: Window): Promise<File | undefined> {
         return;
       }
       settled = true;
+      target.clearTimeout(giveUp);
       target.removeEventListener("focus", onFocus);
       input.remove();
       resolve(file);
     };
 
     const onFocus = (): void => {
-      // change は focus より先に届く。少し待ってからでなければ選択を取りこぼす
+      // change は focus より先に届く。少し待ってからでなければ選択を取りこぼす。
+      // それでも遅れて届いた場合に備え、打ち切る時点の選択も拾う
       target.setTimeout(() => {
-        finish(undefined);
+        finish(input.files?.[0]);
       }, 500);
     };
+
+    // どのイベントも来ない環境の保険。長めに取って、閉じたものとして扱う
+    const giveUp = target.setTimeout(() => {
+      finish(undefined);
+    }, PICKER_TIMEOUT_MS);
 
     input.addEventListener("change", () => {
       finish(input.files?.[0]);

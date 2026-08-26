@@ -16,6 +16,7 @@ import { hasFileUpdate, reloadFileSource } from "./storage/fileAccess";
 import type { Deck } from "./deck/types";
 import { createAssetBindings, findMissingAssets, type AssetBindings } from "./view/assets";
 import { createHome, type HomeView } from "./view/home";
+import type { ReloadState } from "./view/hud";
 import { startPresentation, type Presentation } from "./view/presentation";
 
 /** 同梱の原稿。取得に失敗する経路を作らないため、どちらもバンドルへ入れる（D-26） */
@@ -39,6 +40,8 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
   let bindings: AssetBindings | undefined;
   /** 読み直しが走っている間だけ true。二重に走らせない（設計 16.3） */
   let reloading = false;
+  /** 更新を見つけた印が出ているか。取り消しや失敗で消してしまわないため（FR-41） */
+  let updateFound = false;
 
   /** 発表画面と、そこで使っていた blob URL を捨てる（設計 15.2） */
   const stop = (): void => {
@@ -169,13 +172,17 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
     try {
       const outcome = await reloadFileSource(current, { target, includeAssets });
 
+      // 取り消し・失敗では更新の印を消さない。ファイルはまだ新しいままなので、
+      // 印を落とすと「更新に気付けない」状態へ戻ってしまう（FR-41）
+      const settled: ReloadState["status"] = updateFound ? "updated" : "idle";
+
       if (outcome.status === "cancelled") {
-        presentation?.setReload({ status: "idle" });
+        presentation?.setReload({ status: settled });
         return;
       }
 
       if (outcome.status === "failed") {
-        presentation?.setReload({ status: "idle", message: outcome.message });
+        presentation?.setReload({ status: settled, message: outcome.message });
         return;
       }
 
@@ -185,18 +192,31 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
         deck = parseDeck(outcome.source.text);
       } catch (error) {
         presentation?.setReload({
-          status: "idle",
+          status: settled,
           message: error instanceof DeckError ? error.userMessage : "原稿を読み直せませんでした。",
         });
         return;
       }
 
+      // 待っている間に別の原稿へ切り替わっていたら、この結果は捨てる。
+      // 上書きすると、利用者が選び直した原稿を勝手に差し替えることになる
+      if (source !== current) {
+        return;
+      }
+
       source = outcome.source;
+      updateFound = false;
       // 参照と更新時刻も含めて保存し直す。リロードしても最新の内容で再開できる（FR-27）
       await saveSource(target, outcome.source);
 
       if (outcome.status === "unchanged") {
         presentation?.setReload({ status: "idle", message: outcome.note ?? "変更はありません。" });
+        return;
+      }
+
+      // 待っている間に入口へ戻っていることがある（設計 16.3）。そこで画面を作り直すと
+      // 「戻る」を取り消してしまうので、保存だけで終える
+      if (!presentation) {
         return;
       }
 
@@ -226,6 +246,7 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
     void hasFileUpdate(current).then((updated) => {
       // 調べている間に画面が変わっていることがある。いまの状態だけを見て決める
       if (updated && presentation && !reloading && source === current) {
+        updateFound = true;
         presentation.setReload({ status: "updated" });
       }
     });

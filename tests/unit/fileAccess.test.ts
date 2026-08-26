@@ -22,6 +22,8 @@ function createHandle(
   content: string,
   lastModified: number,
   permission: PermissionState = "granted",
+  /** 許可を求められたときに返す答え。省略したら今の状態のまま */
+  answer?: PermissionState,
 ): FakeHandle & FileSystemFileHandle {
   const handle = {
     kind: "file" as const,
@@ -34,6 +36,7 @@ function createHandle(
     },
     requestPermission(): Promise<PermissionState> {
       handle.requests += 1;
+      handle.permission = answer ?? handle.permission;
       return Promise.resolve(handle.permission);
     },
     getFile(): Promise<File> {
@@ -219,6 +222,54 @@ describe("reloadFileSource", () => {
       "小さい画像",
     );
     expect(outcome.status === "updated" && outcome.note).toContain("big.png");
+  });
+
+  it("未許可の画像も、押されたときは許可を求めて読み直す（設計 16.2）", async () => {
+    const handle = createHandle("talk.md", "# 新しい原稿", 2000);
+    const image = createHandle("a.png", "新しい画像", 2000, "prompt", "granted");
+    const source = fileSource(handle, {
+      assets: [{ name: "a.png", blob: new Blob(["古い画像"]), handle: image }],
+    });
+
+    const outcome = await reloadFileSource(source, { target: noPicker, includeAssets: true });
+
+    expect(outcome.status === "updated" && (await outcome.source.assets[0]?.blob.text())).toBe(
+      "新しい画像",
+    );
+    expect((image as unknown as FakeHandle).requests).toBe(1);
+  });
+
+  it("許可されなかった画像は古いまま残し、名前を伝える", async () => {
+    const handle = createHandle("talk.md", "# 新しい原稿", 2000);
+    const image = createHandle("a.png", "新しい画像", 2000, "prompt", "denied");
+    const source = fileSource(handle, {
+      assets: [{ name: "a.png", blob: new Blob(["古い画像"]), handle: image }],
+    });
+
+    const outcome = await reloadFileSource(source, { target: noPicker, includeAssets: true });
+
+    expect(outcome.status === "updated" && (await outcome.source.assets[0]?.blob.text())).toBe(
+      "古い画像",
+    );
+    expect(outcome.status === "updated" && outcome.note).toContain("a.png");
+  });
+
+  it("一度断られたら、残りの画像では許可を求めない", async () => {
+    const handle = createHandle("talk.md", "# 新しい原稿", 2000);
+    const first = createHandle("a.png", "新しい画像", 2000, "prompt", "denied");
+    const second = createHandle("b.png", "新しい画像", 2000, "prompt", "granted");
+    const source = fileSource(handle, {
+      assets: [
+        { name: "a.png", blob: new Blob(["古い画像 A"]), handle: first },
+        { name: "b.png", blob: new Blob(["古い画像 B"]), handle: second },
+      ],
+    });
+
+    const outcome = await reloadFileSource(source, { target: noPicker, includeAssets: true });
+
+    expect((first as unknown as FakeHandle).requests).toBe(1);
+    expect((second as unknown as FakeHandle).requests).toBe(0);
+    expect(outcome.status === "updated" && outcome.note).toContain("b.png");
   });
 
   it("参照を持たない画像はそのまま残す", async () => {

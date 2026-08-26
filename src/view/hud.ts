@@ -82,17 +82,13 @@ export function createHud(options: HudOptions): Hud {
   // 知らせを消すためのタイマー。デッキを差し替えても残らないよう destroy で止める
   let timer: number | undefined;
 
-  const notify = (message: string | undefined): void => {
+  const notify = (message: string): void => {
     if (timer !== undefined) {
       window.clearTimeout(timer);
       timer = undefined;
     }
 
-    status.textContent = message ?? "";
-
-    if (message === undefined) {
-      return;
-    }
+    status.textContent = message;
 
     timer = window.setTimeout(() => {
       status.textContent = "";
@@ -127,7 +123,10 @@ export function createHud(options: HudOptions): Hud {
         "aria-label",
         state.status === "updated" ? "原稿を読み直す（更新があります）" : "原稿を読み直す",
       );
-      notify(state.message);
+      // 知らせを持たない更新（更新の検知など）で、読みかけの知らせを消さない
+      if (state.message !== undefined) {
+        notify(state.message);
+      }
     },
 
     setFullscreen(active: boolean): void {
