@@ -231,7 +231,6 @@
 }
 
 .mn-hud__actions {
-  position: relative;
   display: flex;
   margin-inline-start: auto;
   gap: 4px;
@@ -286,18 +285,20 @@
 /*
  * 読み直しの結果はボタンの 1 行上へ、右端をボタン群に揃えて出す。
  * 流れから外して置くことで、知らせが出入りしてもボタンの位置が動かない。
+ * 基準は position: fixed の .mn-hud。操作ボタンの列を基準にすると、
+ * その幅（数十 px）で折り返してしまう。
  */
 .mn-hud__status {
   position: absolute;
   right: 0;
   bottom: calc(100% + 4px);
-  overflow: hidden;
   max-width: 60vw;
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--mn-hud-bg, rgb(255 255 255 / 0.75));
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: right;
+  /* 長い知らせは上へ折り返す。下端を固定してあるのでボタンの位置は動かない */
+  line-height: 1.5;
 }
 
 /* 知らせが無いときに地だけが残らないようにする */

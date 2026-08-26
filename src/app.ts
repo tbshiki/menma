@@ -204,13 +204,18 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
         return;
       }
 
+      // 結果とただし書きは両方出す。「読み直せなかった画像」だけが出て、
+      // 読み直せたのかどうかが分からない状態を作らない
+      const withNote = (message: string): string =>
+        outcome.note === undefined ? message : `${message} ${outcome.note}`;
+
       source = outcome.source;
       updateFound = false;
       // 参照と更新時刻も含めて保存し直す。リロードしても最新の内容で再開できる（FR-27）
       await saveSource(target, outcome.source);
 
       if (outcome.status === "unchanged") {
-        presentation?.setReload({ status: "idle", message: outcome.note ?? "変更はありません。" });
+        presentation?.setReload({ status: "idle", message: withNote("変更はありません。") });
         return;
       }
 
@@ -221,7 +226,7 @@ export async function startApp(mount: HTMLElement, target: Window): Promise<() =
       }
 
       // ページ位置はハッシュが持っている。作り直した controller が読み直す（設計 16.3）
-      showPresentation(deck, outcome.source, outcome.note ?? "読み直しました。");
+      showPresentation(deck, outcome.source, withNote("読み直しました。"));
     } finally {
       reloading = false;
     }
