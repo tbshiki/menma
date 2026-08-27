@@ -281,6 +281,39 @@ test.describe("表示", () => {
     }
   });
 
+  test("どの画面の大きさでも、はみ出さず中央に置かれる（FR-09、D-32）", async ({ page }) => {
+    for (const size of [
+      // 基準キャンバス（1600x900）より小さい画面。ここでずれると右下が切れる
+      { width: 1280, height: 720 },
+      // 16:9 で割り切れず、倍率が半端になる大きさ
+      { width: 1451, height: 811 },
+      { width: 900, height: 1000 },
+      // 基準キャンバスより大きい画面
+      { width: 1700, height: 940 },
+    ]) {
+      await page.setViewportSize(size);
+
+      await expect(async () => {
+        const box = await page.locator(".mn-stage").boundingBox();
+
+        expect(box).not.toBeNull();
+        if (!box) {
+          return;
+        }
+
+        // 1px は端数の丸め分
+        expect(box.x).toBeGreaterThanOrEqual(-1);
+        expect(box.y).toBeGreaterThanOrEqual(-1);
+        expect(box.x + box.width).toBeLessThanOrEqual(size.width + 1);
+        expect(box.y + box.height).toBeLessThanOrEqual(size.height + 1);
+
+        // 余白は左右（上下）へ均等に配る
+        expect(box.x).toBeCloseTo(size.width - (box.x + box.width), 0);
+        expect(box.y).toBeCloseTo(size.height - (box.y + box.height), 0);
+      }).toPass({ timeout: 2000 });
+    }
+  });
+
   test("ページ番号は左下、操作ボタンは右下に出る（FR-18）", async ({ page }) => {
     const viewport = page.viewportSize();
     const counterBox = await page.locator(".mn-hud__counter").boundingBox();

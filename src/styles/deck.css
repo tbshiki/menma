@@ -3,8 +3,9 @@
  * ここには「どう並ぶか」と、本文要素の組み方を書く。
  */
 
+/* 16:9 に収めた結果できる余白は、キャンバスを中央に置いて左右（または上下）へ均等に配る */
 .mn-deck {
-  display: grid;
+  position: relative;
   overflow: hidden;
   width: 100%;
   height: 100vh;
@@ -13,8 +14,6 @@
   background: var(--mn-page-bg);
   color: var(--mn-fg);
   font-family: var(--mn-font-sans);
-  /* 16:9 に収めた結果できる余白は、キャンバスを中央に置いて左右（または上下）へ均等に配る */
-  place-items: center;
 }
 
 /*
@@ -23,13 +22,21 @@
  *
  * **自分の色を持たない**（D-31）。全面はスライドが必ず塗るので下地は要らず、色を持つと
  * 端数の倍率で拡縮したときに縁から 1px 覗き、暗いスライドの左右へ明るい線が出る。
+ *
+ * **中央寄せは親の配置に任せず、自分で行う**（D-32）。縮小前の大きさは常に 1600x900 で、
+ * 画面のほうが小さいと親の中央寄せは「左上へ寄せる」に切り替わる。そこから中心を軸に
+ * 縮小するため、スライドが右下へずれて画面からはみ出す。
+ * `top/left: 50%` で箱の左上を画面の中心へ置き、`translate(-50%, -50%)` で自分の半分だけ
+ * 戻すと、倍率がいくつでも中心が画面の中心に重なる。並び順は translate が後（左）で、
+ * 逆にすると戻す量まで拡縮されて合わない。
  */
 .mn-stage {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 1600px;
   height: 900px;
-  flex: none;
-  transform: scale(var(--mn-scale, 1));
+  transform: translate(-50%, -50%) scale(var(--mn-scale, 1));
   transform-origin: center center;
 }
 

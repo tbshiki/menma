@@ -271,7 +271,8 @@ const scale = Math.min(containerWidth / canvasWidth, containerHeight / canvasHei
 
 余白は白（`--mn-page-bg`）なので、スライドとの境目はほとんど見えない。
 
-- `.mn-stage` は固定 px サイズを持ち、`transform: scale(var(--mn-scale))` と `transform-origin: center` で中央へ配置する
+- `.mn-stage` は固定 px サイズ（1600x900）を持ち、`transform: scale(var(--mn-scale))` で縮める
+- **中央寄せは `.mn-stage` 自身が行う**（[D-32](./decisions.md)）。`position: absolute` + `top/left: 50%` + `translate(-50%, -50%)` で、倍率がいくつでも中心が画面の中心に重なる。親（`.mn-deck`）の中央寄せに任せると、画面が 1600x900 より小さいときに右下へずれて切れる
 - **`.mn-stage` は自分の背景色を持たない**（[D-31](./decisions.md)）。全面はスライドが塗るため下地は要らず、持たせると端数の倍率で縁から 1px 覗く
 - 再計算は `ResizeObserver` で行う。全画面への遷移でも発火する
 - 再計算は次フレームへまとめ、連続リサイズで描画が詰まらないようにする

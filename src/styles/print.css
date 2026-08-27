@@ -32,7 +32,6 @@
     overflow: visible;
     height: auto;
     background: none;
-    place-items: start;
   }
 
   /* 画面へ収めるための拡縮は印刷では邪魔になる。実寸のまま流す */
