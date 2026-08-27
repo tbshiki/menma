@@ -87,4 +87,11 @@ describe("toHexColor", () => {
     expect(toHexColor("transparent")).toBeUndefined();
     expect(toHexColor("")).toBeUndefined();
   });
+
+  it("完全に透明は黒にせず undefined にする", () => {
+    // getComputedStyle は背景の指定が無いとき rgba(0, 0, 0, 0) を返す。
+    // これを黒として扱うと、設定パネルが「いまの色は黒」と嘘をつく
+    expect(toHexColor("rgba(0, 0, 0, 0)")).toBeUndefined();
+    expect(toHexColor("rgb(255 255 255 / 0)")).toBeUndefined();
+  });
 });

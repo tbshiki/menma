@@ -133,14 +133,14 @@ test("色を指定しなければテーマの値を使う", async ({ page }) => 
 
 test("入口画面で選んだ色が原稿の指定より優先される（FR-37）", async ({ page }) => {
   // 入口で色を変えてから、別の色を書いた原稿を開く
-  await page.getByLabel("スライドの外側").fill("#102030");
+  await page.getByLabel("スライドの外側の色").fill("#102030");
   await pasteAndOpen(page, ["---", "pageBackground: #ffeeee", "---", "# 優先順位"].join("\n"));
 
   await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(16, 32, 48)");
 });
 
 test("原稿の指定に戻すと UI の色を使わなくなる", async ({ page }) => {
-  await page.getByLabel("スライドの外側").fill("#102030");
+  await page.getByLabel("スライドの外側の色").fill("#102030");
   await page.getByRole("button", { name: "原稿の指定に戻す" }).click();
 
   await pasteAndOpen(
@@ -152,10 +152,10 @@ test("原稿の指定に戻すと UI の色を使わなくなる", async ({ page
 });
 
 test("入口画面で選んだ色は次に開いたときも残る", async ({ page }) => {
-  await page.getByLabel("進み具合のバー").fill("#f97316");
+  await page.getByLabel("バーの色").fill("#f97316");
   await page.reload();
 
-  await expect(page.getByLabel("進み具合のバー")).toHaveValue("#f97316");
+  await expect(page.getByLabel("バーの色")).toHaveValue("#f97316");
 
   await pasteAndOpen(page, "# 保存の確認");
   await expect(page.locator(".mn-progress__bar")).toHaveCSS(

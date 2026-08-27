@@ -185,13 +185,16 @@ menma 独自の命名として、接頭辞 `mn-` を使う（[D-05](./decisions.
     <!-- 操作 UI と進み具合のバーは画面基準（キャンバスの外）。ページ番号が左下、ボタンが右下 -->
     <div class="mn-hud">
       <button type="button" class="mn-hud__counter" data-armed="false">3 / 24</button>
-      <!-- 既定は閉じている。⚙ で開く（17 章） -->
-      <div class="mn-settings" role="group" aria-label="表示の設定" hidden>...</div>
+      <!-- 知らせと設定パネルを積む列。互いに重ならないよう 1 か所へまとめる（17.3） -->
+      <div class="mn-hud__stack">
+        <span class="mn-hud__status" aria-live="polite"></span>
+        <!-- 既定は閉じている。⚙ で開く（17 章） -->
+        <div class="mn-settings" role="group" aria-label="表示の設定" tabindex="-1" hidden>...</div>
+      </div>
       <div class="mn-hud__actions">
         <!-- ファイルから開いた原稿のときだけ出る。更新があると data-updated="true"（16.5） -->
-        <span class="mn-hud__status" aria-live="polite"></span>
         <button type="button" class="mn-hud__button" aria-label="原稿を読み直す" data-updated="false"></button>
-        <button type="button" class="mn-hud__button" aria-label="表示の設定" data-settings-toggle="true"></button>
+        <button type="button" class="mn-hud__button" aria-label="表示の設定" data-settings-toggle="true" aria-expanded="false"></button>
         <button type="button" class="mn-hud__button" aria-label="前のスライド"></button>
         <button type="button" class="mn-hud__button" aria-label="次のスライド"></button>
         <button type="button" class="mn-hud__button" aria-label="全画面表示"></button>
@@ -629,12 +632,15 @@ export type DeckSource =
 | 項目 | 保存する値 | 未指定のとき |
 | --- | --- | --- |
 | 進み具合のバーの表示 | `showProgress: boolean` | 原稿の `showProgress` に従う |
+
 | スライドの外側の色 | `pageBackground: string` | 原稿かテーマの色 |
 | 進み具合のバーの色 | `progressColor: string` | 原稿かテーマの色 |
 
-保存先は入口画面の色設定と同じ `localStorage`（`storage/appearance.ts`）。**入口画面と発表画面は同じ値を見る。** 優先順位も同じで、UI の指定 → 原稿の指定 → テーマ（[D-21](./decisions.md)）。
+保存先は入口画面の色設定と同じ `localStorage`（`storage/appearance.ts`）。**入口画面と発表画面は同じ 3 つを同じラベルで出し、同じ値を見る。** 優先順位も同じで、UI の指定 → 原稿の指定 → テーマ（[D-21](./decisions.md)）。
 
-「原稿の指定に戻す」は 3 つのキーをすべて落とす。すべて未指定になったら保存そのものを消す。
+**バーの表示は 3 択で出す**（原稿に従う / 出す / 出さない）。2 択のチェックボックスにすると、一度触った時点でこの端末の指定が必ず残り、以降どの原稿を開いても原稿の `showProgress` が効かなくなる。入口画面にも同じ 3 択を置くのは、`showControls: false` の原稿しか使わない人が ⚙ に届かず、付けた指定を外せなくなるため。
+
+「原稿の指定に戻す」は 3 つのキーをすべて落とす。すべて未指定になったら保存そのものを消す。**入口画面の「原稿の指定に戻す」も同じく 3 つとも落とす。** 入口に出ていない指定（バーの表示）が残ると、入口からは直せない状態が生まれるため。
 
 ### 17.2 その場で当て直す
 
@@ -649,6 +655,10 @@ export type DeckSource =
 ### 17.3 閉じ方と発表の邪魔をしないこと
 
 - 既定は閉じている。`.mn-hud` の中に置き、操作ボタンの上へ出す
-- `Esc` と外側の `pointerdown` で閉じる。**開閉ボタン自身は外側の判定から外す**（閉じた直後に開き直してしまうため）。判定は `data-settings-toggle` 属性で示し合わせる
+- `Esc` と外側の `pointerdown` で閉じる。**どちらも `document` で拾う。** パネルの中だけで `Esc` を拾うと、フォーカスが操作ボタンへ移ったあとに閉じられなくなる
+- **開閉ボタン自身は外側の判定から外す**（閉じた直後に開き直してしまうため）。判定は `data-settings-toggle` 属性で示し合わせる
+- **閉じるときは、中に残ったフォーカスを外す。** 隠れた入力にフォーカスが残ると、以降のキーがそこへ届き続け、矢印キーでページを送れなくなる（FR-14）
+- 開いたときのフォーカスは**パネル自身**（`tabindex="-1"`）へ置く。入力欄へ入れると、次のスライドへ送るつもりの矢印キーが設定の値を変えてしまう
+- **ボタンを経由しない閉じ方がある**ため、開閉はパネルから `onToggle` で知らせ、ボタンの `aria-expanded` を合わせる（FR-22）
 - 開いている間は操作 UI を減光しない（`.mn-hud:has(.mn-settings:not([hidden]))`）
-- パネルの中は `input` / `button` なので、フォーカスがある間はページ移動キーが働かない（FR-14）。設定中に矢印キーでスライドが動かない
+- 知らせ（16.5）とパネルは `.mn-hud__stack` の中に積む。**同じ隅へ別々に絶対配置しない。** 重なって、読み直しの結果がパネルの裏へ隠れる

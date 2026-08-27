@@ -59,6 +59,11 @@ export function createHud(options: HudOptions): Hud {
   actions.hidden = !options.showControls;
   root.append(actions);
 
+  // 知らせと設定パネルを積む列。同じ場所へ別々に絶対配置すると重なる（設計 17.3）
+  const stack = document.createElement("div");
+  stack.className = "mn-hud__stack";
+  root.append(stack);
+
   const status = document.createElement("span");
   status.className = "mn-hud__status";
   // 読み直しの結果は割り込ませない。ページ切り替えの読み上げと競合させないため polite にする
@@ -67,25 +72,41 @@ export function createHud(options: HudOptions): Hud {
   const reload = createReloadButton(options.onReload);
 
   if (reload) {
-    actions.append(status, reload);
+    stack.append(status);
+    actions.append(reload);
   }
 
   const settings = options.settings;
+  let syncSettingsState = (): void => {};
 
   if (settings) {
-    // パネルは操作 UI の層に置く。拡縮の影響を受けず、印刷にも出ない（設計 17）
-    root.append(settings.root);
+    // パネルは操作 UI の層に置く。拡縮の影響を受けず、印刷にも出ない（設計 17）。
+    // 知らせの下（ボタンに近いほう）へ積む
+    stack.append(settings.root);
 
     const open = createButton("表示の設定", "⚙", () => {
       if (settings.isOpen()) {
         settings.close();
-        return;
+      } else {
+        settings.open();
       }
-      settings.open();
+      syncSettingsState();
     });
     // 外側のクリックで閉じる判定から、このボタンだけ外す
     open.setAttribute(TOGGLE_ATTRIBUTE, "true");
     actions.append(open);
+
+    /**
+     * 開閉の状態をボタンへ映す（FR-22）。
+     *
+     * `Esc` や外側のクリックなど、ボタンを経由しない閉じ方があるため、
+     * パネル側から呼んでもらう
+     */
+    syncSettingsState = (): void => {
+      open.setAttribute("aria-expanded", String(settings.isOpen()));
+    };
+    syncSettingsState();
+    settings.onToggle(syncSettingsState);
   }
 
   const previous = createButton("前のスライド", "‹", options.onPrevious);

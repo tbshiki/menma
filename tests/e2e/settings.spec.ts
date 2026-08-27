@@ -47,7 +47,7 @@ test("進み具合のバーをその場で消せる（FR-43）", async ({ page }
   await expect(page.locator(".mn-progress")).toBeVisible();
 
   await page.locator(gear).click();
-  await page.getByLabel("進み具合のバーを出す").uncheck();
+  await page.getByLabel("進み具合のバー").selectOption("出さない");
 
   await expect(page.locator(".mn-progress")).toBeHidden();
   // 原稿は書き換えない。スライドはそのまま
@@ -59,7 +59,7 @@ test("原稿が消しているバーを出すこともできる（優先順位�
   await expect(page.locator(".mn-progress")).toBeHidden();
 
   await page.locator(gear).click();
-  await page.getByLabel("進み具合のバーを出す").check();
+  await page.getByLabel("進み具合のバー").selectOption("出す");
 
   await expect(page.locator(".mn-progress")).toBeVisible();
 });
@@ -98,7 +98,7 @@ test("発表中に変えた設定は次に開いたときも残る", async ({ pa
 
   await page.locator(gear).click();
   await page.getByLabel("スライドの外側の色").fill("#102030");
-  await page.getByLabel("進み具合のバーを出す").uncheck();
+  await page.getByLabel("進み具合のバー").selectOption("出さない");
 
   await page.reload();
 
@@ -139,4 +139,111 @@ test("入口画面で設定した値が発表画面の設定にも出る", async
   await page.locator(gear).click();
 
   await expect(page.getByLabel("スライドの外側の色")).toHaveValue("#204060");
+});
+
+test("入口画面の「原稿の指定に戻す」はバーの設定も戻す", async ({ page }) => {
+  await open(page);
+
+  await page.locator(gear).click();
+  await page.getByLabel("進み具合のバー").selectOption("出さない");
+  await expect(page.locator(".mn-progress")).toBeHidden();
+
+  // 入口へ戻って、まとめて戻す
+  await page.goBack();
+  await expect(page.locator(".mn-home")).toBeVisible();
+  await page.getByRole("button", { name: "原稿の指定に戻す" }).click();
+
+  await page.getByRole("textbox", { name: "Markdown の原稿" }).fill("# 戻したあと");
+  await page.getByRole("button", { name: "スライドにする" }).click();
+
+  await expect(page.locator(".mn-progress")).toBeVisible();
+});
+
+test("設定ボタンが開閉の状態を持つ（FR-22）", async ({ page }) => {
+  await open(page);
+
+  await expect(page.locator(gear)).toHaveAttribute("aria-expanded", "false");
+
+  await page.locator(gear).click();
+  await expect(page.locator(gear)).toHaveAttribute("aria-expanded", "true");
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator(gear)).toHaveAttribute("aria-expanded", "false");
+});
+
+test("Esc で閉じたあともキーでページを送れる（FR-14）", async ({ page }) => {
+  await open(page);
+
+  await page.locator(gear).click();
+  // 中の入力までフォーカスを進めてから閉じる
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(panel)).toBeHidden();
+
+  // 隠れた入力にフォーカスが残ると、以降キーがそこへ届き続けて移動できなくなる
+  const stuck = await page.evaluate(() => {
+    const element = document.querySelector(".mn-settings");
+    return element !== null && element.contains(document.activeElement);
+  });
+  expect(stuck).toBe(false);
+
+  await page.keyboard.press("ArrowRight");
+
+  await expect(page).toHaveURL(/#\/2$/);
+});
+
+test("パネルの外にフォーカスがあっても Esc で閉じる", async ({ page }) => {
+  await open(page);
+
+  await page.locator(gear).click();
+  await expect(page.locator(panel)).toBeVisible();
+
+  // 全画面ボタンなど、パネルの外へフォーカスを移してから閉じる
+  await page.locator('.mn-hud__button[aria-label="全画面表示"]').focus();
+  await page.keyboard.press("Escape");
+
+  await expect(page.locator(panel)).toBeHidden();
+});
+
+test("原稿に従う状態へ戻せる（3 状態）", async ({ page }) => {
+  await open(page, ["---", "showProgress: false", "---", "# バー無しの原稿"].join("\n"));
+
+  await page.locator(gear).click();
+  await page.getByLabel("進み具合のバー").selectOption("出す");
+  await expect(page.locator(".mn-progress")).toBeVisible();
+
+  // 原稿に従う へ戻すと、色の指定は残したままバーだけ原稿の指定に帰る
+  await page.getByLabel("スライドの外側の色").fill("#102030");
+  await page.getByLabel("進み具合のバー").selectOption({ value: "" });
+
+  await expect(page.locator(".mn-progress")).toBeHidden();
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(16, 32, 48)");
+});
+
+test("読み直しの知らせが設定パネルに隠れない", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("textbox", { name: "Markdown の原稿" }).fill("# 重なりの確認");
+  await page.getByRole("button", { name: "スライドにする" }).click();
+
+  await page.locator(gear).click();
+  await expect(page.locator(panel)).toBeVisible();
+
+  // 知らせの居場所を作るため、直接出す代わりに位置関係だけを見る
+  const panelBox = await page.locator(panel).boundingBox();
+  const actionsBox = await page.locator(".mn-hud__actions").boundingBox();
+
+  expect(panelBox).not.toBeNull();
+  expect(actionsBox).not.toBeNull();
+  // パネルは操作ボタンの上にあり、重なっていない
+  expect((panelBox?.y ?? 0) + (panelBox?.height ?? 0)).toBeLessThanOrEqual(actionsBox?.y ?? 0);
+});
+
+test("入口画面からもバーの表示を決められる（FR-43）", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("進み具合のバー").selectOption("出さない");
+
+  await page.getByRole("textbox", { name: "Markdown の原稿" }).fill("# 入口で消したバー");
+  await page.getByRole("button", { name: "スライドにする" }).click();
+
+  await expect(page.locator(".mn-progress")).toBeHidden();
 });

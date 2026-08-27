@@ -16,6 +16,21 @@ import type { Appearance } from "../storage/appearance";
  */
 export const TOGGLE_ATTRIBUTE = "data-settings-toggle";
 
+/**
+ * 進み具合のバーの選択肢（FR-43）。
+ *
+ * **2 択にしない。** 「出す / 出さない」だけだと、一度触った時点でこの端末の指定が必ず残り、
+ * 以降どの原稿を開いても原稿の `showProgress` が効かなくなる（D-28）。
+ */
+function progressChoices(deckShowProgress: boolean): { value: string; label: string }[] {
+  return [
+    // 原稿がどちらを指定しているかも見せる。「従う」と言われても中身が分からないため
+    { value: "", label: `原稿に従う（${deckShowProgress ? "出す" : "出さない"}）` },
+    { value: "true", label: "出す" },
+    { value: "false", label: "出さない" },
+  ];
+}
+
 export type SettingsOptions = {
   /** いま保存されている指定 */
   appearance: Appearance;
@@ -37,6 +52,13 @@ export type SettingsView = {
   isOpen(): boolean;
   open(): void;
   close(): void;
+  /**
+   * 開閉が変わったときに呼ばれる先を登録する。
+   *
+   * `Esc` や外側のクリックなど**ボタンを経由しない閉じ方**があるので、
+   * 開閉ボタン側の表示はここから知らせる
+   */
+  onToggle(listener: () => void): void;
   /** 登録したイベントを解く */
   destroy(): void;
 };
@@ -45,9 +67,11 @@ export function createSettings(options: SettingsOptions): SettingsView {
   const root = document.createElement("div");
   root.className = "mn-settings";
   root.hidden = true;
-  // 操作 UI の層は pointer-events を切ってあるので、ここだけ受け取れるようにする
   root.setAttribute("role", "group");
   root.setAttribute("aria-label", "表示の設定");
+  // 開いたときのフォーカスの行き先。入力欄へ入れると、次のスライドへ送るつもりで押した
+  // 矢印キーが設定の値を変えてしまう。ここなら矢印キーはページ送りのまま効く
+  root.tabIndex = -1;
 
   const current: Appearance = { ...options.appearance };
 
@@ -55,11 +79,15 @@ export function createSettings(options: SettingsOptions): SettingsView {
     options.onChange({ ...current });
   };
 
-  const progress = createCheck(
-    "進み具合のバーを出す",
-    current.showProgress ?? options.deckShowProgress,
-    (checked) => {
-      current.showProgress = checked;
+  const progress = createSelect(
+    "進み具合のバー",
+    progressChoices(options.deckShowProgress),
+    (value) => {
+      if (value === "") {
+        delete current.showProgress;
+      } else {
+        current.showProgress = value === "true";
+      }
       notify();
     },
   );
@@ -91,17 +119,21 @@ export function createSettings(options: SettingsOptions): SettingsView {
 
   /** いま効いている値を入力へ映す */
   const sync = (): void => {
-    progress.input.checked = current.showProgress ?? options.deckShowProgress;
+    progress.input.value = current.showProgress === undefined ? "" : String(current.showProgress);
 
     const colors = options.readColors();
     background.input.value = current.pageBackground ?? colors.pageBackground ?? "#ffffff";
     bar.input.value = current.progressColor ?? colors.progressColor ?? "#1d5fa8";
   };
 
+  /**
+   * `Esc` で閉じる。
+   *
+   * **document で拾う。** パネルの中だけで拾うと、フォーカスが外（操作ボタンなど）へ
+   * 移ったあとに閉じられなくなる
+   */
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key === "Escape") {
-      // 発表画面へ伝えない。ここで閉じるだけにする
-      event.stopPropagation();
       close();
     }
   };
@@ -126,15 +158,26 @@ export function createSettings(options: SettingsOptions): SettingsView {
     close();
   };
 
+  let onToggle: (() => void) | undefined;
+
   const close = (): void => {
     if (root.hidden) {
       return;
     }
+
+    // **中にフォーカスを残したまま隠さない。** 隠れた入力にフォーカスが残ると、以降の
+    // キーがそこへ届き続け、矢印キーでページを送れなくなる（FR-14）
+    const active = root.ownerDocument.activeElement;
+
+    if (active instanceof HTMLElement && root.contains(active)) {
+      active.blur();
+    }
+
     root.hidden = true;
     root.ownerDocument.removeEventListener("pointerdown", onPointerDown, true);
+    root.ownerDocument.removeEventListener("keydown", onKeyDown, true);
+    onToggle?.();
   };
-
-  root.addEventListener("keydown", onKeyDown);
 
   return {
     root,
@@ -151,39 +194,50 @@ export function createSettings(options: SettingsOptions): SettingsView {
       sync();
       root.hidden = false;
       root.ownerDocument.addEventListener("pointerdown", onPointerDown, true);
-      progress.input.focus();
+      root.ownerDocument.addEventListener("keydown", onKeyDown, true);
+      root.focus();
+      onToggle?.();
     },
 
     close,
 
+    onToggle(listener: () => void): void {
+      onToggle = listener;
+    },
+
     destroy(): void {
       close();
-      root.removeEventListener("keydown", onKeyDown);
       root.remove();
     },
   };
 }
 
-function createCheck(
+function createSelect(
   label: string,
-  checked: boolean,
-  onChange: (checked: boolean) => void,
-): { root: HTMLElement; input: HTMLInputElement } {
+  choices: readonly { value: string; label: string }[],
+  onChange: (value: string) => void,
+): { root: HTMLElement; input: HTMLSelectElement } {
   const root = document.createElement("label");
   root.className = "mn-settings__row";
-
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.className = "mn-settings__check";
-  input.checked = checked;
-  input.addEventListener("change", () => {
-    onChange(input.checked);
-  });
 
   const text = document.createElement("span");
   text.textContent = label;
 
-  root.append(input, text);
+  const input = document.createElement("select");
+  input.className = "mn-settings__select";
+
+  for (const choice of choices) {
+    const option = document.createElement("option");
+    option.value = choice.value;
+    option.textContent = choice.label;
+    input.append(option);
+  }
+
+  input.addEventListener("change", () => {
+    onChange(input.value);
+  });
+
+  root.append(text, input);
   return { root, input };
 }
 

@@ -57,6 +57,14 @@
   max-width: 100%;
 }
 
+.mn-home__select {
+  padding: 0.15rem 0.25rem;
+  border: 1px solid #d8dee4;
+  border-radius: 4px;
+  background: #ffffff;
+  font: inherit;
+}
+
 .mn-home__textarea {
   display: block;
   width: 100%;

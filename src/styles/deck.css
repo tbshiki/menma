@@ -285,15 +285,28 @@
 }
 
 /*
- * 読み直しの結果はボタンの 1 行上へ、右端をボタン群に揃えて出す。
- * 流れから外して置くことで、知らせが出入りしてもボタンの位置が動かない。
- * 基準は position: fixed の .mn-hud。操作ボタンの列を基準にすると、
- * その幅（数十 px）で折り返してしまう。
+ * 知らせと設定パネルを積む列（設計 17.3）。
+ *
+ * ボタンの上へ、右端を揃えて重ねずに並べる。流れから外して置くことで、
+ * 中身が出入りしてもボタンの位置が動かない。基準は position: fixed の .mn-hud。
+ * 操作ボタンの列を基準にすると、その幅（数十 px）で折り返してしまう。
  */
-.mn-hud__status {
+.mn-hud__stack {
   position: absolute;
   right: 0;
   bottom: calc(100% + 4px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.mn-hud__stack:empty {
+  display: none;
+}
+
+/* 読み直しの結果。数秒で消える */
+.mn-hud__status {
   max-width: 60vw;
   padding: 2px 6px;
   border-radius: 4px;
@@ -315,9 +328,6 @@
  * スライドの上に重なるので、地を敷いて読めるようにする。
  */
 .mn-settings {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 6px);
   display: flex;
   flex-direction: column;
   padding: 8px 10px;
@@ -351,10 +361,19 @@
   cursor: pointer;
 }
 
-.mn-settings__check {
+.mn-settings__select {
+  border: 1px solid currentcolor;
+  border-radius: 3px;
+  background: none;
+  color: inherit;
   cursor: pointer;
-  /* 既定の青いチェックのままだと、暗い背景で浮くので色を合わせる */
-  accent-color: var(--mn-progress-color, var(--mn-accent));
+  font: inherit;
+}
+
+/* 選択肢はネイティブの描画になるため、地の色を指定して読めるようにする */
+.mn-settings__select option {
+  background: var(--mn-page-bg, #ffffff);
+  color: var(--mn-hud-fg, var(--mn-fg));
 }
 
 .mn-settings__reset {

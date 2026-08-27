@@ -22,6 +22,13 @@ export function resolveColor(fromUi: string | undefined, fromDeck: string): stri
  * 透明度は落ちる。設定パネルの初期値を出すためだけに使うので、これで足りる。
  */
 export function toHexColor(computed: string): string | undefined {
+  const numbers = computed.match(/\d+(\.\d+)?/g);
+
+  // 完全に透明（rgba(0, 0, 0, 0)）は「色が無い」状態。黒として扱わない
+  if (numbers && numbers.length >= 4 && Number(numbers[3]) === 0) {
+    return undefined;
+  }
+
   const rgb = parseRgb(computed);
 
   if (!rgb) {

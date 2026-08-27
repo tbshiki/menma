@@ -471,8 +471,8 @@ function createSection(heading: string, description: string): HTMLElement {
  */
 function createAppearanceSection(options: HomeOptions): HTMLElement {
   const section = createSection(
-    "色",
-    "この端末で見るときの色。原稿に書かれた指定より優先されます。",
+    "表示",
+    "この端末で見るときの表示。原稿に書かれた指定より優先されます。発表中は ⚙ からも変えられます。",
   );
 
   const current: Appearance = { ...options.appearance };
@@ -483,8 +483,17 @@ function createAppearanceSection(options: HomeOptions): HTMLElement {
     options.onAppearanceChange({ ...current });
   };
 
+  const progressVisibility = createProgressField(current.showProgress, (value) => {
+    if (value === "") {
+      delete current.showProgress;
+    } else {
+      current.showProgress = value === "true";
+    }
+    options.onAppearanceChange({ ...current });
+  });
+
   const background = createColorField(
-    "スライドの外側",
+    "スライドの外側の色",
     options.appearance.pageBackground ?? "#ffffff",
     (value) => {
       update({ ...current, pageBackground: value });
@@ -492,7 +501,7 @@ function createAppearanceSection(options: HomeOptions): HTMLElement {
   );
 
   const progress = createColorField(
-    "進み具合のバー",
+    "バーの色",
     options.appearance.progressColor ?? "#1d5fa8",
     (value) => {
       update({ ...current, progressColor: value });
@@ -506,11 +515,55 @@ function createAppearanceSection(options: HomeOptions): HTMLElement {
   reset.addEventListener("click", () => {
     background.input.value = "#ffffff";
     progress.input.value = "#1d5fa8";
-    update({});
+    progressVisibility.input.value = "";
+    // 色だけでなくバーの表示も戻す。ここで戻せない指定を残さない（FR-43）
+    delete current.pageBackground;
+    delete current.progressColor;
+    delete current.showProgress;
+    options.onAppearanceChange({ ...current });
   });
 
-  section.append(background.root, progress.root, reset);
+  section.append(progressVisibility.root, background.root, progress.root, reset);
   return section;
+}
+
+/**
+ * 進み具合のバーの表示（FR-43）。発表画面の設定と同じ 3 状態にする。
+ *
+ * 入口画面にも置くのは、`showControls: false` の原稿だけを使っていると
+ * 発表画面の ⚙ に届かず、一度付けた指定を外せなくなるため（D-28）。
+ */
+function createProgressField(
+  value: boolean | undefined,
+  onChange: (value: string) => void,
+): { root: HTMLElement; input: HTMLSelectElement } {
+  const root = document.createElement("label");
+  root.className = "mn-home__color";
+
+  const text = document.createElement("span");
+  text.textContent = "進み具合のバー";
+
+  const input = document.createElement("select");
+  input.className = "mn-home__select";
+
+  for (const choice of [
+    { value: "", label: "原稿に従う" },
+    { value: "true", label: "出す" },
+    { value: "false", label: "出さない" },
+  ]) {
+    const option = document.createElement("option");
+    option.value = choice.value;
+    option.textContent = choice.label;
+    input.append(option);
+  }
+
+  input.value = value === undefined ? "" : String(value);
+  input.addEventListener("change", () => {
+    onChange(input.value);
+  });
+
+  root.append(text, input);
+  return { root, input };
 }
 
 function createColorField(
