@@ -71,7 +71,7 @@ showPageNumber: true
 | `showPageNumber` | boolean | `true` | ページ番号の表示 |
 | `showControls` | boolean | `true` | 操作 UI の表示 |
 | `showProgress` | boolean | `true` | 画面下端に出る進み具合のバー |
-| `pageBackground` | string | テーマの値 | スライドの外側（16:9 に収めた余白）の色 |
+| `pageBackground` | string | テーマの値 | スライドの外側（16:9 に収めた余白）の色。`@slide pageBackground=` でページごとに上書きできる（FR-44） |
 | `progressColor` | string | テーマの値 | 進み具合のバーの色 |
 | `transition` | string | `none` | ページ遷移。MVP は `none` のみ |
 | `externalLinksNewTab` | boolean | `true` | 外部リンクを別タブで開く |
@@ -133,10 +133,15 @@ MVP の Front Matter は**フラットな `key: value` のみ**を解釈する�
 | `layout` | 4.3 のレイアウト名 | 描画レイアウト。未知の値は `default` へフォールバック |
 | `class` | 識別子（空白区切りで複数可） | スライド要素へ追加するクラス。`[A-Za-z0-9_-]` のみ許可。`mn-` は menma の構造クラス用に予約しており指定できない |
 | `background` | 画像パス | 背景画像。`cover` レイアウト向け |
-| `backgroundColor` | CSS の色 | 背景色 |
+| `backgroundColor` | CSS の色 | スライド面の背景色 |
 | `foreground` | CSS の色 | 文字色 |
+| `pageBackground` | CSS の色 | そのページを表示している間だけのスライドの外側の色（FR-44） |
 
-**この 5 つ以外は受け付けない。** 任意の HTML 属性やインラインスタイルを注入する方式は採用しない（NFR-07）。色の値は CSS Custom Property 経由で適用し、そのまま HTML 属性へは書き出さない。
+**この 6 つ以外は受け付けない。** 任意の HTML 属性やインラインスタイルを注入する方式は採用しない（NFR-07）。色の値は CSS Custom Property 経由で適用し、そのまま HTML 属性へは書き出さない。
+
+`backgroundColor` と `pageBackground` は範囲が違う。`backgroundColor` は 16:9 のスライド面、`pageBackground` はその外側（レターボックスの余白）を塗る。
+
+`@slide pageBackground=` は Front Matter の `pageBackground` を、そのページを表示している間だけ上書きする。**色の決め方は UI の指定 → `@slide` の指定 → Front Matter の指定 → テーマ**（[D-21](./decisions.md)、[D-29](./decisions.md)）。指定の無いページへ移ると Front Matter かテーマの色へ戻る。
 
 ### 4.3 レイアウトと描画契約
 

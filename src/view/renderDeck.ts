@@ -17,6 +17,8 @@ export type DeckView = {
   stage: HTMLElement;
   /** 表示するスライドを切り替える */
   showSlide(index: number): void;
+  /** 見た目の指定を差し替えて当て直す（FR-43） */
+  setAppearance(next: Appearance): void;
 };
 
 export function renderDeck(
@@ -28,8 +30,19 @@ export function renderDeck(
   root.className = "mn-deck";
   root.dataset.theme = deck.meta.theme;
 
-  // 発表中にも同じ処理で当て直せるよう、色の適用は 1 か所へ寄せる（FR-43）
-  applyAppearance(root, deck.meta, appearance);
+  /**
+   * 色は「UI の指定」と「いま出しているページの指定」の両方で決まる（FR-44、D-29）。
+   * どちらが変わっても同じ 1 か所から当て直せるよう、2 つの状態をここで持つ。
+   * 呼び出し側へ配ると、片方だけ更新した組み合わせが生まれる。
+   */
+  let current = appearance;
+  let currentIndex = 0;
+
+  const refreshAppearance = (): void => {
+    applyAppearance(root, deck.meta, current, deck.slides[currentIndex]?.pageBackground);
+  };
+
+  refreshAppearance();
 
   const stage = document.createElement("div");
   stage.className = "mn-stage";
@@ -66,6 +79,15 @@ export function renderDeck(
       }
       next.hidden = false;
       visible = next;
+
+      // ページごとに外側の色が変わりうる（FR-44）
+      currentIndex = index;
+      refreshAppearance();
+    },
+
+    setAppearance(next: Appearance): void {
+      current = next;
+      refreshAppearance();
     },
   };
 }

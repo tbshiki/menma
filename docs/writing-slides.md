@@ -172,7 +172,7 @@ showPageNumber: true
 | `showPageNumber` | 真偽値 | `true` | 左下のページ番号を出すか |
 | `showControls` | 真偽値 | `true` | 右下の操作ボタンを出すか |
 | `showProgress` | 真偽値 | `true` | 下端の進み具合のバーを出すか |
-| `pageBackground` | 色 | テーマの色 | スライドの外側（余白）の色 |
+| `pageBackground` | 色 | テーマの色 | スライドの外側（余白）の色。ページごとに変えることもできる（後述） |
 | `progressColor` | 色 | テーマの色 | 進み具合のバーの色 |
 | `externalLinksNewTab` | 真偽値 | `true` | 外部リンクを別タブで開くか |
 
@@ -212,10 +212,26 @@ showPageNumber: true
 | `layout` | レイアウト名 | 配置。未知の名前は `default` になる |
 | `class` | 英数字・`-`・`_` | 自前のクラス（`mn-` で始まる名前は不可） |
 | `background` | 画像のパス | 全面の背景画像。`cover` 向け |
-| `backgroundColor` | CSS の色 | そのスライドの背景色 |
+| `backgroundColor` | CSS の色 | そのスライドの背景色（16:9 の中） |
 | `foreground` | CSS の色 | そのスライドの文字色 |
+| `pageBackground` | CSS の色 | そのスライドの**外側**（余白）の色 |
 
-**この 5 つ以外は書けない。** 任意の HTML 属性やスタイルは指定できない。
+**この 6 つ以外は書けない。** 任意の HTML 属性やスタイルは指定できない。
+
+---
+
+# 1 枚だけ色を変える
+
+```md
+@slide layout=center backgroundColor=#101418 foreground=#f2f5f8 pageBackground=#101418
+
+# ここから第 2 部
+```
+
+- `backgroundColor` は 16:9 の**中**、`pageBackground` は**外側の余白**
+- 両方そろえると、画面全体がそのページの色になる
+- 指定の無いページへ移ると、元の色（Front Matter かテーマ）へ戻る
+- **発表画面の ⚙ で外側の色を指定していると、そちらが勝つ。** 「原稿の指定に戻す」を押せば原稿の色が生きる
 
 ---
 

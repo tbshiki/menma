@@ -9,7 +9,7 @@ import {
 } from "../navigation/fullscreen";
 import { connectHash } from "../navigation/hash";
 import { connectKeyboard } from "../navigation/keyboard";
-import { applyAppearance, resolveShowProgress } from "./appearance";
+import { resolveShowProgress } from "./appearance";
 import { toHexColor } from "./colors";
 import { createHud, type HudOptions, type ReloadState } from "./hud";
 import { createProgress } from "./progress";
@@ -68,7 +68,7 @@ export function startPresentation(
    * DOM を捨てる理由が無い
    */
   const applyLive = (next: Appearance): void => {
-    applyAppearance(view.root, deck.meta, next);
+    view.setAppearance(next);
     progress.root.hidden = !resolveShowProgress(deck.meta, next);
     handlers.onAppearanceChange(next);
   };

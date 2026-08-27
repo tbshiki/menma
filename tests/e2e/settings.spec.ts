@@ -247,3 +247,62 @@ test("入口画面からもバーの表示を決められる（FR-43）", async 
 
   await expect(page.locator(".mn-progress")).toBeHidden();
 });
+
+/** 1 枚目は原稿全体の色、2 枚目だけ自前の色、3 枚目は指定なし（FR-44、D-29） */
+const perPage = [
+  "---",
+  "pageBackground: rgb(255, 238, 238)",
+  "---",
+  "",
+  "# 1 枚目",
+  "",
+  "---",
+  "",
+  "@slide pageBackground=#101418",
+  "",
+  "# 2 枚目",
+  "",
+  "---",
+  "",
+  "# 3 枚目",
+].join("\n");
+
+test("@slide でページごとに外側の色を変えられる（FR-44）", async ({ page }) => {
+  await open(page, perPage);
+  const deck = page.locator(".mn-deck");
+
+  await expect(deck).toHaveCSS("background-color", "rgb(255, 238, 238)");
+
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(visibleSlide)).toContainText("2 枚目");
+  await expect(deck).toHaveCSS("background-color", "rgb(16, 20, 24)");
+  // 暗いページでは隅の文字色も付いてくる（D-21）
+  await expect(page.locator(".mn-hud")).toHaveCSS("color", "rgb(244, 246, 248)");
+
+  // 指定の無いページへ移ったら原稿全体の色へ戻る（前のページの色を残さない）
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(visibleSlide)).toContainText("3 枚目");
+  await expect(deck).toHaveCSS("background-color", "rgb(255, 238, 238)");
+  await expect(page.locator(".mn-hud")).not.toHaveCSS("color", "rgb(244, 246, 248)");
+});
+
+test("UI の指定はページごとの指定より優先される（D-29）", async ({ page }) => {
+  await open(page, perPage);
+  const deck = page.locator(".mn-deck");
+
+  await page.locator(gear).click();
+  await page.getByLabel("スライドの外側の色").fill("#204060");
+  await expect(deck).toHaveCSS("background-color", "rgb(32, 64, 96)");
+
+  // 入力欄にフォーカスがあるとページ移動キーは効かない（FR-14）。閉じてから移る
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(visibleSlide)).toContainText("2 枚目");
+  // ページを移っても UI の指定のまま
+  await expect(deck).toHaveCSS("background-color", "rgb(32, 64, 96)");
+
+  // 既定へ戻せば、そのページの指定が生きる
+  await page.locator(gear).click();
+  await page.getByRole("button", { name: "原稿の指定に戻す" }).click();
+  await expect(deck).toHaveCSS("background-color", "rgb(16, 20, 24)");
+});

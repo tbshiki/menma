@@ -77,6 +77,8 @@ export type Slide = {
   background?: string;
   backgroundColor?: string;
   foreground?: string;
+  /** そのページを表示している間だけ外側の色を上書きする（FR-44、D-29） */
+  pageBackground?: string;
 };
 
 export type DeckWarning = {
@@ -633,7 +635,7 @@ export type DeckSource =
 | --- | --- | --- |
 | 進み具合のバーの表示 | `showProgress: boolean` | 原稿の `showProgress` に従う |
 
-| スライドの外側の色 | `pageBackground: string` | 原稿かテーマの色 |
+| スライドの外側の色 | `pageBackground: string` | 原稿かテーマの色。**ページごとの指定（FR-44）より UI が優先される** |
 | 進み具合のバーの色 | `progressColor: string` | 原稿かテーマの色 |
 
 保存先は入口画面の色設定と同じ `localStorage`（`storage/appearance.ts`）。**入口画面と発表画面は同じ 3 つを同じラベルで出し、同じ値を見る。** 優先順位も同じで、UI の指定 → 原稿の指定 → テーマ（[D-21](./decisions.md)）。
@@ -644,9 +646,16 @@ export type DeckSource =
 
 ### 17.2 その場で当て直す
 
-`view/appearance.ts` の `applyAppearance()` が唯一の適用点で、**描画時と設定変更時の両方から呼ぶ**。
+`view/appearance.ts` の `applyAppearance()` が唯一の適用点で、**描画時・設定変更時・ページ移動時から呼ぶ**。ページ移動でも呼ぶのは、`@slide pageBackground=` がページごとに外側の色を変えるため（FR-44、[D-29](./decisions.md)）。
 
-- **必ず前の指定を消してから当て直す。** 足すだけにすると、暗い色から明るい色へ戻したときに操作 UI の文字色（`--mn-hud-fg`）が暗いまま残る
+呼び出しは `renderDeck()` が返す `DeckView` に閉じ込める。`showSlide()` と `setAppearance()` のどちらから来ても、**いま出しているページの指定と UI の指定を同時に見て**当て直す。呼び出し側が 2 つの状態を持ち回ると、片方だけ更新した組み合わせが必ず生まれる。
+
+```ts
+applyAppearance(root, meta, appearance, slides[current]?.pageBackground);
+// 色は UI → @slide → Front Matter → テーマ（D-21、D-29）
+```
+
+- **必ず前の指定を消してから当て直す。** 足すだけにすると、暗い色から明るい色へ戻したときに操作 UI の文字色（`--mn-hud-fg`）が暗いまま残る。ページごとの指定でも同じで、指定の無いページへ移ったら前のページの色を消す
 - デッキは作り直さない。原稿は変わっていないので DOM を捨てる理由が無く、表示中のページも動かない
 - バーの表示は `progress.root.hidden` を切り替えるだけ
 

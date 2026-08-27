@@ -3,24 +3,34 @@ import type { DeckMeta } from "../deck/types";
 import { computeColor, isDarkBackground, resolveColor } from "./colors";
 
 /**
- * 見た目の指定をデッキの DOM へ当てる（FR-36、FR-37、FR-43）。
+ * 見た目の指定をデッキの DOM へ当てる（FR-36、FR-37、FR-43、FR-44）。
  *
- * 描画時（`renderDeck`）と、発表中に設定が変わったとき（`presentation`）の**両方から呼ぶ**。
+ * 描画時（`renderDeck`）、発表中に設定が変わったとき、ページを移ったときの**すべてから呼ぶ**。
  * そのため**必ず前の指定を消してから当て直す**。足すだけにすると、暗い色から明るい色へ
- * 戻したときに操作 UI の文字色が暗いままになる。
+ * 戻したときに操作 UI の文字色が暗いままになり、外側の色を指定したページから指定の無い
+ * ページへ移ったときにも前の色が残る。
  *
  * 値は CSS Custom Property として渡す。解釈できない値は無視されるだけで済む（NFR-07）。
  */
 
 const PROPERTIES = ["--mn-page-bg", "--mn-progress-color", "--mn-hud-fg", "--mn-hud-bg"] as const;
 
-export function applyAppearance(root: HTMLElement, meta: DeckMeta, appearance: Appearance): void {
+export function applyAppearance(
+  root: HTMLElement,
+  meta: DeckMeta,
+  appearance: Appearance,
+  /** いま出しているページの `@slide pageBackground=`（FR-44、D-29） */
+  slidePageBackground?: string,
+): void {
   for (const property of PROPERTIES) {
     root.style.removeProperty(property);
   }
 
-  // 色は UI の指定 → 原稿の指定 → テーマ の順で決める（D-21）
-  const pageBackground = resolveColor(appearance.pageBackground, meta.pageBackground);
+  // 色は UI の指定 → @slide の指定 → 原稿全体の指定 → テーマ の順で決める（D-21、D-29）
+  const pageBackground = resolveColor(
+    appearance.pageBackground,
+    slidePageBackground ?? meta.pageBackground,
+  );
   const progressColor = resolveColor(appearance.progressColor, meta.progressColor);
 
   applyColor(root, "--mn-page-bg", pageBackground);

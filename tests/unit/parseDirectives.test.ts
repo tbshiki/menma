@@ -30,6 +30,25 @@ describe("parseDirectives", () => {
     expect(result.main).toBe("# 表紙");
   });
 
+  it("色の指定を 3 つとも読む（FR-44）", () => {
+    const result = parseDirectives(
+      slide("@slide backgroundColor=#101418 foreground=#f2f5f8 pageBackground=#101418\n\n本文"),
+    );
+
+    expect(result.backgroundColor).toBe("#101418");
+    expect(result.foreground).toBe("#f2f5f8");
+    // スライド面（backgroundColor）と外側（pageBackground）は別の指定
+    expect(result.pageBackground).toBe("#101418");
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("指定の無いページは色を持たない（前のページの色を引き継がせない）", () => {
+    const result = parseDirectives(slide("@slide layout=center\n\n本文"));
+
+    expect(result.pageBackground).toBeUndefined();
+    expect(result.backgroundColor).toBeUndefined();
+  });
+
   it("class を空白区切りで複数指定できる", () => {
     const result = parseDirectives(slide('@slide class="intro dark-theme"\n\n本文'));
 

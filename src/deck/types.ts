@@ -57,6 +57,8 @@ export type Slide = {
   background?: string;
   backgroundColor?: string;
   foreground?: string;
+  /** そのページを表示している間だけ、スライドの外側の色を上書きする（FR-44、D-29） */
+  pageBackground?: string;
 };
 
 export type DeckWarningKind =

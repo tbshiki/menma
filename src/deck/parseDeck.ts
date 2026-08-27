@@ -42,6 +42,7 @@ export function parseDeck(source: string): Deck {
       background: directives.background,
       backgroundColor: directives.backgroundColor,
       foreground: directives.foreground,
+      pageBackground: directives.pageBackground,
     };
   });
 

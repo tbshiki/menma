@@ -16,6 +16,8 @@ export type DirectiveResult = {
   background: string | undefined;
   backgroundColor: string | undefined;
   foreground: string | undefined;
+  /** そのページを表示している間だけ外側の色を上書きする（FR-44） */
+  pageBackground: string | undefined;
   /** 主要部の Markdown */
   main: string;
   /** 補助部の Markdown（`@aside` 以降） */
@@ -32,7 +34,14 @@ const NOTES_DIRECTIVE = /^@notes\s*$/;
 const CLASS_NAME = /^[A-Za-z0-9_-]+$/;
 /** 構造クラスと衝突させないため、内部で使う接頭辞は原稿から指定できない */
 const RESERVED_CLASS_PREFIX = "mn-";
-const ATTRIBUTE_NAMES = ["layout", "class", "background", "backgroundColor", "foreground"] as const;
+const ATTRIBUTE_NAMES = [
+  "layout",
+  "class",
+  "background",
+  "backgroundColor",
+  "foreground",
+  "pageBackground",
+] as const;
 
 export function parseDirectives(slide: RawSlide): DirectiveResult {
   const lines = slide.source.split("\n");
@@ -107,6 +116,7 @@ export function parseDirectives(slide: RawSlide): DirectiveResult {
     background: attributes?.background,
     backgroundColor: attributes?.backgroundColor,
     foreground: attributes?.foreground,
+    pageBackground: attributes?.pageBackground,
     main: trimBlankLines(mainLines),
     aside: asideLines.length > 0 ? orUndefined(trimBlankLines(asideLines)) : undefined,
     notes: notesLines.length > 0 ? orUndefined(trimBlankLines(notesLines)) : undefined,
@@ -120,6 +130,7 @@ type AttributeResult = {
   background: string | undefined;
   backgroundColor: string | undefined;
   foreground: string | undefined;
+  pageBackground: string | undefined;
 };
 
 /** `@slide` の後ろにある `name=value` の並びを読む */
@@ -130,6 +141,7 @@ function parseAttributes(rest: string, line: number, warnings: DeckWarning[]): A
     background: undefined,
     backgroundColor: undefined,
     foreground: undefined,
+    pageBackground: undefined,
   };
 
   for (const token of tokenize(rest)) {
