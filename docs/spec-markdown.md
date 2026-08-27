@@ -95,7 +95,7 @@ MVP の Front Matter は**フラットな `key: value` のみ**を解釈する�
 - 値の前後の空白は取り除く。`"` または `'` で囲んだ場合は囲みを外す
 - boolean は `true` / `false`（大文字小文字を区別しない）のみ。それ以外は型エラー
 - 取りうる値が決まっているキー（MVP では `aspectRatio` は `16/9`、`transition` は `none`）に他の値を書いた場合も型エラーとして扱い、既定値へフォールバックする
-- 色（`pageBackground` / `progressColor`）は CSS が解釈できる書き方をそのまま渡す（`#fff`、`rgb(0 0 0)`、`tomato` など）。解釈できない値は無視され、テーマの色のままになる
+- 色（`pageBackground` / `progressColor`）は CSS が解釈できる書き方をそのまま渡す（`#fff`、`rgb(0 0 0)`、`tomato` など）。**解釈できない値と空の値はその指定を無かったことにし、1 つ下の指定へ落とす**（[D-30](./decisions.md)）。どれも読めなければテーマの色になる
 - `#` から行末まではコメント。ただしコメントと認めるのは**前が行頭か空白で、後ろが空白か行末**の `#` だけ。引用符の内側も対象外
   - `title: C# 入門` → `#` は値の一部
   - `pageBackground: #101418` → `#` は値の一部（色として扱える）
@@ -142,6 +142,8 @@ MVP の Front Matter は**フラットな `key: value` のみ**を解釈する�
 `backgroundColor` と `pageBackground` は範囲が違う。`backgroundColor` は 16:9 のスライド面、`pageBackground` はその外側（レターボックスの余白）を塗る。
 
 `@slide pageBackground=` は Front Matter の `pageBackground` を、そのページを表示している間だけ上書きする。**色の決め方は UI の指定 → `@slide` の指定 → Front Matter の指定 → テーマ**（[D-21](./decisions.md)、[D-29](./decisions.md)）。指定の無いページへ移ると Front Matter かテーマの色へ戻る。
+
+色として解釈できない値（`pageBackground=notacolor`）と、値を書かなかった場合（`pageBackground=`）は、その指定を無かったことにして 1 つ下の指定へ落とす（[D-30](./decisions.md)）。書き間違えたページだけ原稿全体の色が消えることはない。
 
 ### 4.3 レイアウトと描画契約
 

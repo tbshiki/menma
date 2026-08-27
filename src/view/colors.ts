@@ -5,14 +5,39 @@
  * `rgb()` を読む。解析の網羅性を持ち込まずに済む。
  */
 
-/** 色の決め方: UI の指定 → 原稿の指定 → テーマ（undefined を返す） */
-export function resolveColor(fromUi: string | undefined, fromDeck: string): string | undefined {
-  if (fromUi !== undefined && fromUi !== "") {
-    return fromUi;
+/** 選ばれた色と、その算出結果（`rgb()`）。算出結果は操作 UI の文字色を決めるのに使う */
+export type ResolvedColor = {
+  /** 原稿や UI に書かれたままの値。CSS へはこちらを渡す */
+  value: string;
+  /** ブラウザが解釈した `rgb()` */
+  computed: string;
+};
+
+/**
+ * 候補を上から順に見て、**ブラウザが解釈できる最初の色**を選ぶ（[D-21](../../docs/decisions.md)、D-29、D-30）。
+ *
+ * 空の指定と解釈できない指定は「無かったこと」にして次の候補へ落ちる。落とさずに当てると、
+ * `var()` の展開に失敗して外側が透明になり、テーマの色にも 1 つ下の指定にも戻らない。
+ *
+ * 解釈できるかの判定（`compute`）は DOM に依存するため、呼び出し側から渡してもらう。
+ * この関数自体は候補の順番だけを決める。
+ */
+export function resolveColor(
+  candidates: readonly (string | undefined)[],
+  compute: (value: string) => string | undefined,
+): ResolvedColor | undefined {
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === "") {
+      continue;
+    }
+
+    const computed = compute(candidate);
+
+    if (computed !== undefined) {
+      return { value: candidate, computed };
+    }
   }
-  if (fromDeck !== "") {
-    return fromDeck;
-  }
+
   return undefined;
 }
 

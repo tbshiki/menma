@@ -8,19 +8,40 @@ import {
   toHexColor,
 } from "../../src/view/colors";
 
+/**
+ * 解釈できるかの判定はブラウザの仕事なので、ここでは「`#` で始まる 7 文字だけ読める」偽物を渡す。
+ * 実際の色の解釈は E2E で確かめる（D-20 と同じ切り分け）。
+ */
+function compute(value: string): string | undefined {
+  return /^#[0-9a-f]{6}$/i.test(value) ? `rgb(${value})` : undefined;
+}
+
 describe("resolveColor", () => {
   it("UI の指定を最優先にする（D-21）", () => {
-    expect(resolveColor("#ff0000", "#00ff00")).toBe("#ff0000");
+    expect(resolveColor(["#ff0000", "#0000ff", "#00ff00"], compute)?.value).toBe("#ff0000");
   });
 
-  it("UI の指定が無ければ原稿の指定を使う", () => {
-    expect(resolveColor(undefined, "#00ff00")).toBe("#00ff00");
-    expect(resolveColor("", "#00ff00")).toBe("#00ff00");
+  it("UI の指定が無ければ @slide、それも無ければ原稿全体の指定を使う（D-29）", () => {
+    expect(resolveColor([undefined, "#0000ff", "#00ff00"], compute)?.value).toBe("#0000ff");
+    expect(resolveColor(["", "", "#00ff00"], compute)?.value).toBe("#00ff00");
   });
 
-  it("どちらも無ければテーマに任せる", () => {
-    expect(resolveColor(undefined, "")).toBeUndefined();
-    expect(resolveColor("", "")).toBeUndefined();
+  it("どれも無ければテーマに任せる", () => {
+    expect(resolveColor([undefined, undefined, ""], compute)).toBeUndefined();
+    expect(resolveColor([], compute)).toBeUndefined();
+  });
+
+  it("解釈できない指定は無かったことにして次の候補へ落ちる（D-30）", () => {
+    expect(resolveColor(["notacolor", "#00ff00"], compute)?.value).toBe("#00ff00");
+    // どれも読めなければテーマ。透明になる値を当てさせない
+    expect(resolveColor(["notacolor", "rgb(0 0 0)"], compute)).toBeUndefined();
+  });
+
+  it("選んだ値と算出結果の両方を返す（操作 UI の文字色に使う）", () => {
+    expect(resolveColor(["#101418"], compute)).toEqual({
+      value: "#101418",
+      computed: "rgb(#101418)",
+    });
   });
 });
 

@@ -306,3 +306,43 @@ test("UI の指定はページごとの指定より優先される（D-29）", a
   await page.getByRole("button", { name: "原稿の指定に戻す" }).click();
   await expect(deck).toHaveCSS("background-color", "rgb(16, 20, 24)");
 });
+
+/** 2 枚目の `@slide` だけ差し替えて、端の値の扱いを見る（D-30） */
+function withSecondSlide(directive: string): string {
+  return [
+    "---",
+    "pageBackground: rgb(255, 238, 238)",
+    "---",
+    "",
+    "# 1 枚目",
+    "",
+    "---",
+    "",
+    directive,
+    "",
+    "# 2 枚目",
+  ].join("\n");
+}
+
+test("値が空の @slide pageBackground= は原稿全体の色を消さない（D-30）", async ({ page }) => {
+  await open(page, withSecondSlide("@slide pageBackground="));
+
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(visibleSlide)).toContainText("2 枚目");
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(255, 238, 238)");
+});
+
+test("色として読めない @slide pageBackground は 1 つ下の指定へ落ちる（D-30）", async ({ page }) => {
+  await open(page, withSecondSlide("@slide pageBackground=notacolor"));
+
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(visibleSlide)).toContainText("2 枚目");
+  // 当ててしまうと var() の展開に失敗し、rgba(0, 0, 0, 0)（透明）になる
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(255, 238, 238)");
+});
+
+test("色として読めない Front Matter の指定はテーマの色のままにする（D-30）", async ({ page }) => {
+  await open(page, ["---", "pageBackground: notacolor", "---", "", "# 読めない色"].join("\n"));
+
+  await expect(page.locator(".mn-deck")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+});

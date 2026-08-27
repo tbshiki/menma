@@ -653,6 +653,7 @@ export type DeckSource =
 ```ts
 applyAppearance(root, meta, appearance, slides[current]?.pageBackground);
 // 色は UI → @slide → Front Matter → テーマ（D-21、D-29）
+// resolveColor() が候補を順に見て、ブラウザが解釈できる最初の色を選ぶ（D-30）
 ```
 
 - **必ず前の指定を消してから当て直す。** 足すだけにすると、暗い色から明るい色へ戻したときに操作 UI の文字色（`--mn-hud-fg`）が暗いまま残る。ページごとの指定でも同じで、指定の無いページへ移ったら前のページの色を消す
