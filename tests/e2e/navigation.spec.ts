@@ -245,6 +245,12 @@ test.describe("表示", () => {
     expect(box.width / box.height).toBeCloseTo(16 / 9, 2);
   });
 
+  test("基準キャンバスは自分の背景色を持たない（D-31）", async ({ page }) => {
+    // 色を持たせると、端数の倍率で拡縮したときに縁から 1px 覗き、
+    // 暗いスライドの左右へ明るい線が入る
+    await expect(page.locator(".mn-stage")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  });
+
   test("ウィンドウの比率を変えても 16:9 のまま、縦か横がいっぱいになる", async ({ page }) => {
     for (const size of [
       { width: 1280, height: 720 },

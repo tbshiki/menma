@@ -20,13 +20,15 @@
 /*
  * 基準キャンバス。ここが 16:9 の正典で、scaler.ts はこの実寸を読んで倍率を決める（設計 5.2）。
  * 大きさを変えるときは JS ではなくこの 2 行を変える。
+ *
+ * **自分の色を持たない**（D-31）。全面はスライドが必ず塗るので下地は要らず、色を持つと
+ * 端数の倍率で拡縮したときに縁から 1px 覗き、暗いスライドの左右へ明るい線が出る。
  */
 .mn-stage {
   position: relative;
   width: 1600px;
   height: 900px;
   flex: none;
-  background: var(--mn-bg);
   transform: scale(var(--mn-scale, 1));
   transform-origin: center center;
 }

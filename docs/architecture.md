@@ -272,6 +272,7 @@ const scale = Math.min(containerWidth / canvasWidth, containerHeight / canvasHei
 余白は白（`--mn-page-bg`）なので、スライドとの境目はほとんど見えない。
 
 - `.mn-stage` は固定 px サイズを持ち、`transform: scale(var(--mn-scale))` と `transform-origin: center` で中央へ配置する
+- **`.mn-stage` は自分の背景色を持たない**（[D-31](./decisions.md)）。全面はスライドが塗るため下地は要らず、持たせると端数の倍率で縁から 1px 覗く
 - 再計算は `ResizeObserver` で行う。全画面への遷移でも発火する
 - 再計算は次フレームへまとめ、連続リサイズで描画が詰まらないようにする
 - 基準を固定することで、テーマの px 値をそのまま使え、**どの画面でも 1 枚に入る情報量が変わらない**
