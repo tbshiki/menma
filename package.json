@@ -35,6 +35,6 @@
     "wrangler": "^4.124.0"
   },
   "dependencies": {
-    "markdown-it": "^15.0.0"
+    "markdown-it": "^15.0.2"
   }
 }
